@@ -1,0 +1,164 @@
+# Typographie ZenRay — le système complet
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Typography and visual design system.
+>
+> **Vocabulaire déclencheur (73 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> police · polices · font · typographie · typo · intervariable · inter · anthropicserif · anthropicmono · hiragino · serif · sans · mono · graisse · weight · bold · light · regular · 350 · 400 · taille · font-size · px · corps · hauteur d'x · échelle · interligne · line-height · chiffres · nombres · woff2 · webfont · @font-face · unicode-range · subset · repli · fallback · glyphe · kana · kanji · japonais à l'écran · icône · icone · sf symbols · svg · thesvg · liquid glass · sidebar · chrome · interface · ui · design system · jeton · token · variable css · curseur · slider · mockup · maquette · panneau · hda sliders · typeface · font family · font weight · x height · type scale · webfont · font subsetting · icon set · design system · css variable · slider panel · mockup
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/Design/Design1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## PRIORITÉ 0 ABSOLUE : LE TRIO TYPOGRAPHIQUE SYSTÈME (2026-08-21)
+
+Toute interface ZenRay utilise trois familles, avec un rôle et une graisse explicites :
+
+- **AnthropicSerif, 350** : contenu éditorial et titres de contenu.
+- **AnthropicSerif, Regular 400** : **tous les nombres visibles dans l'interface** (compteurs, durées, dates, prix, quantités).
+- **Inter, 400 maximum** : interface, chrome, boutons, labels et texte fonctionnel. `400` est la coupe Regular ; ne jamais employer Light (`300`) ni une graisse supérieure à Regular pour le sans.
+- **AnthropicMono** : code, chemins, hash, identifiants et données techniques qui doivent rester monospace. Un nombre visible dans un texte d'interface reste Serif, même s'il se trouve dans un bouton ou une métadonnée lisible.
+
+Ces trois familles forment le système par défaut. `AnthropicSans`, `system-ui`, `Georgia`, `SF Mono` et `ui-monospace` ne remplacent pas ce trio dans une UI produit. Les noms de famille complets restent obligatoires, avec un repli explicite seulement lorsque la famille ne dessine pas le glyphe demandé.
+
+Le cas YouTube Guard fixe le contrôle : la capture du 2026-08-21 affiche le sans en `system-ui` à `300`, donc en Light par le code, et non à cause d'un anti-aliasing trop fort. Le correctif est `Inter` à `400`, tandis que le titre reste `AnthropicSerif` à `350` et que le compteur passe lui aussi en Serif.
+
+## PRIORITÉ 0 : LES ICÔNES SE CHERCHENT AVANT DE SE DESSINER (2026-09-10)
+
+Pour toute nouvelle interface, choisir d'abord une icône existante dans [SF Symbols](https://developer.apple.com/sf-symbols/). Si aucune icône ne convient, choisir un SVG depuis [theSVG.org](https://thesvg.org/*). Ces deux bibliothèques sont les chemins de référence pour les icônes, avant tout dessin manuel ou glyphe improvisé.
+
+Le nom, la source et le rendu de l'icône restent centralisés dans le composant ou la configuration de la famille concernée. Vérifier que le symbole existe réellement dans son catalogue et qu'il reste lisible dans les thèmes utilisés.
+
+## LE TRIO DE POLICES POUR TOUTE APP (2026-08-16, corrigé le 2026-08-21)
+
+**Sans : `Inter` à Regular 400. Serif : `AnthropicSerif` à 350. Chiffres : `AnthropicSerif` à Regular 400. Mono : `AnthropicMono`.** C'est le trio par défaut de toute app et de tout site désormais, ZenRayProgress et ZenRayCloud en tête.
+
+**Le sans est passé à Inter le 2026-08-16, et Hiragino Sans W4 devient son REPLI JAPONAIS.** La variante
+resserrée, Inter Tight, a été essayée puis écartée le soir même : elle serre trop le texte d'interface et ne
+sert que les gros titres, où elle reste disponible en une ligne puisque le site continue de la servir.
+Inter ne
+dessine aucun kana ni aucun kanji, si bien qu'elle doit toujours être suivie d'Hiragino Sans W4 dans la
+pile : le repli se fait alors glyphe par glyphe, le latin restant en Inter et seuls les caractères
+japonais basculant. C'est la même mécanique que pour le mono, et elle ne se voit jamais quand elle marche.
+Elle est de surcroît une fonte VARIABLE de 100 à 900, sous licence SIL Open Font, servie en woff2 par le
+produit : un seul fichier de 344 Kio couvre toutes les graisses, sur tous les appareils. La variante
+italique est un second fichier, que le navigateur ne télécharge que si la page contient vraiment de
+l'italique.
+
+**Attention à sa taille apparente, mesurée et non supposée.** À taille égale, Inter rend plus petit
+qu'Hiragino Sans W4 : la même phrase à 40 px mesure 354 px contre 416, soit quinze pour cent d'écart.
+Adopter cette famille impose donc de remonter l'échelle de l'interface d'environ un pixel sur les petites
+tailles, faute de quoi tout le chrome paraît rétréci sans qu'on sache pourquoi.
+
+**Le serif reste AnthropicSerif, mais sa graisse normative devient 350.** Les fichiers statiques installés sur
+ce Mac proposent Light 300, Regular 400 et Medium 500 ; `350` est donc la valeur de composition à déclarer dans
+le CSS, entre Light et Regular, tandis qu'une version variable servie par un produit peut rendre cette valeur
+exactement. Aucun titre ou paragraphe ne revient à 450 ou 600 par défaut.
+
+**Le mono devient AnthropicMono.** Il porte le code, les chemins, les hash et les identifiants techniques, mais
+les nombres intégrés à l'interface lisible restent AnthropicSerif. AnthropicMono est une famille servie par le
+produit, donc elle ne dépend pas du nom système de SF Mono ni d'un repli silencieux du navigateur.
+
+```css
+--zr-police-sans: 'Inter', 'Hiragino Sans W4', 'Hiragino Sans', <repli>, sans-serif;
+--zr-police-serif: 'AnthropicSerif', 'Hiragino Mincho ProN W3', <repli>, serif;
+--zr-police-mono: 'AnthropicMono', ui-monospace, monospace;
+--zr-poids-sans: 400;
+--zr-poids-serif: 350;
+--zr-poids-nombres: 400;
+```
+
+**Écrire le nom de famille COMPLET, jamais la famille nue avec un `font-weight`.** Sur macOS, « Hiragino Sans
+W4 » est une famille à part entière, pas une graisse de « Hiragino Sans » : passer par le poids laisse le
+navigateur choisir une graisse voisine sans rien dire, et l'écart ne se voit qu'après coup.
+
+**LA TAILLE DU CORPS SE RÈGLE PAR LA HAUTEUR D'X, jamais par le nombre en pixels.** Une même valeur ne rend
+pas la même taille apparente d'une police à l'autre : Toppan Bunkyu Mincho a des minuscules nettement plus
+basses qu'AnthropicSerif, si bien que 18 px chez l'un valent 17 px chez l'autre. Changer de police impose
+donc de reprendre ce nombre, et un seul, puisque toute la hiérarchie des titres en dérive par des rapports.
+Réglage retenu pour ZenRayProgress : `--zr-corps-editeur: 17px` au-dessus de 1024 px, 16 px en dessous, et
+sous 640 px ce sont les RAPPORTS qui se resserrent (2,00 vers 1,72 pour le h1), une colonne de téléphone ne
+supportant pas le même écart entre le titre et le texte qu'une page de bureau.
+
+**UNE ÉCHELLE D'INTERFACE DERRIÈRE UN SEUL NOMBRE, au même titre que le corps de texte.** Le chrome d'une
+app (barres, listes, étiquettes, boutons) porte vite des centaines de tailles écrites en dur : ZenRayProgress
+en comptait 806, dont 652 dans des styles en ligne. La parade est un jeton de base et des paliers qui en
+dérivent par des rapports, `--zr-ui-base` et ses `--zr-ui-xs` à `--zr-ui-3xl`. Agrandir l'interface devient
+alors un seul nombre à changer, et l'agrandissement se fait SANS déformer les rapports entre éléments, une
+étiquette restant plus petite que son titre dans la même proportion qu'avant. Les titres de vues, au-delà de
+vingt pixels, restent hors de cette échelle : ils ne relèvent pas du chrome. Migration reproductible :
+`Scripts/echelle-ui.py` du dépôt ZenRayProgress, avec un mode `--essai` qui compte sans rien écrire.
+
+**Pourquoi W4 pour le repli japonais, vérification faite plutôt que de mémoire.** `fc-match "Hiragino Sans"` rend W4 :
+c'est la graisse que macOS choisit lui-même comme normale, donc le réglage suit le système au lieu de le
+contrarier. Le sans existe de W0 à W9. Hiragino Mincho ProN W3 reste en repli derrière AnthropicSerif, pour les
+caractères japonais que celle-ci ne dessine pas.
+
+**La forme, dans les deux cas :**
+```css
+--zr-police-sans: 'Inter', 'Hiragino Sans W4', 'Hiragino Sans', <repli>, sans-serif;
+--zr-police-serif: 'AnthropicSerif', 'Hiragino Mincho ProN W3', <repli>, serif;
+--zr-police-mono: 'AnthropicMono', ui-monospace, monospace;
+```
+
+**UNE POLICE SYSTÈME N'EST PAS UNE GARANTIE : SERVIR LA POLICE, sinon le repli est silencieux (payé le
+2026-08-16 sur iPhone).** Toppan Bunkyu Mincho est livrée par Apple avec macOS, mais **elle n'existe pas sur
+iOS**. Le site retombait donc sur Hiragino Mincho dès qu'on l'ouvrait au téléphone, sans une erreur, sans une
+ligne de console, sans une requête manquante : un repli de police ne se signale jamais, seul l'œil le voit. La
+règle qui en découle vaut pour toute app : une police choisie pour son DESSIN se sert par le produit lui-même ;
+seule une police choisie pour sa seule disponibilité peut rester au système. Hiragino Sans, présente sur macOS
+comme sur iOS, ne pose le problème que le jour où un appareil non Apple entre dans le tableau.
+
+La méthode tient en deux fichiers, parce qu'un jeu japonais Pr6N dépasse les vingt mille glyphes et pèse
+8,9 Mo : on découpe par `unicode-range`, une tranche latine de quelques dizaines de kilo-octets chargée
+partout, une tranche japonaise que le navigateur ne télécharge que si la page contient vraiment des kana.
+Mesuré sur ZenRayProgress : 47 Kio et 2 948 Kio, la seconde restant « unloaded » sur une page en français.
+Script de référence, réutilisable pour n'importe quelle police système : `Scripts/subset-toppan.py` du dépôt
+ZenRayProgress. Contrôle qui ferme le sujet, à faire toujours, car c'est le seul qui distingue la vraie police
+de son repli : comparer la LARGEUR d'une même phrase entre la webfont et le nom système, et exiger le même
+nombre au pixel près.
+
+**Une seule variable par police, jamais un littéral répété.** C'est la loi HDA appliquée à la typographie :
+avant cette règle, la police était écrite en dur 128 fois dans 65 fichiers de ZenRayProgress, et il suffisait
+d'en oublier une pour qu'un bouton garde l'ancienne sans que personne ne le voie.
+
+**ÉPAISSIR UNE POLICE QUI N'A QU'UN SEUL STYLE (méthode validée le 2026-08-16 sur Toppan Bunkyu Mincho, puis
+rendue inutile le soir même par le retour à une fonte variable, ce qui en dit long : la chercher AVANT).**
+Le réflexe `font-weight: 500` ne fait RIEN quand la graisse n'existe pas : la sélection CSS retombe sur 400 en
+silence. Et `600` déclenche le gras SYNTHÉTIQUE du navigateur, qui étale le glyphe et empâte les déliés — c'est
+précisément ce qui tue un mincho ou une antique fine. La bonne méthode est un très fin contour de la même
+couleur, réglé au centième de pixel :
+
+```css
+--zr-corps-graisse: 0.22px;                                  /* ~ +100 de graisse à l'œil ; 0 = style nu */
+-webkit-text-stroke: var(--zr-corps-graisse) currentColor;
+```
+
+Régulier, contrôlé, sans déformer le dessin. Au-delà de 0,3 px les contre-formes commencent à se boucher.
+Chercher d'abord s'il existe une VRAIE coupe plus grasse dans la famille (un Midashi pour un mincho, un W6
+pour du Hiragino) : un vrai dessin bat toujours un épaississement, et le contour n'est que le recours quand la
+police n'a qu'un style, ce qu'un `fc-list` tranche en une seconde.
+
+**Une exception, et une seule : une graisse noire.** Hiragino n'a pas de Black ; un `900` sur du W4 se fabrique
+par synthèse et donne un gras mou. Les titres qui exigent un bloc gardent donc leur propre variable, comme
+`--zr-police-titre` sur la page Goals.
+
+## Correction UI validée le 2026-09-03 : InterVariable et sidebar Liquid Glass
+
+Pour les interfaces ZenRay, utiliser la famille `InterVariable` Regular 400, avec le fichier de police embarqué et déclaré par `@font-face`. Le repli Hiragino sert uniquement aux caractères japonais absents d’Inter. Le nom CSS seul ne prouve pas la police rendue : vérifier une phrase latine dans le navigateur. Cette précision remplace les prescriptions de nom `Inter` non accompagné d’une face servie.
+
+L’atelier `zenray-html-photoshop-pdf-hda-socialmedia` utilise un thème clair par défaut et un thème sombre cohérent pour tout son chrome, tous deux issus de `Memory/Design/ZenRayProgress/UI/10-sidebar.html` et de sa matière sidebar `g9`. Les panneaux Photos et Post, champs, boutons et fenêtres partagent les mêmes tokens Liquid Glass. Le texte du post ne dépasse pas 13 px CSS sur l’écran 4K de Matthieu ; les pixels physiques et la résolution d’export ne changent pas cette taille CSS. Les compositions exportées conservent leurs paramètres artistiques.
+
+## 06 October 2026 : Police display et titrage d'accent avec Vogun Medium (Yukita Creative) (06 October 2026)
+
+- 06 October 2026 (demande de Matthieu) : ajout de `Vogun Medium` ou autre graisse de la famille comme alternative typographique display pour les titrages, les planches de présentation artistiques, les affiches et les identités visuelles fortes. (06 October 2026)
+- 06 October 2026 : DESSIN ET DISPONIBILITÉ. Vogun est une typographie display minimaliste et contemporaine conçue par Yukita Creative, installée localement sous `/Users/zenray/Library/Fonts/Vogun-Medium.ttf`. Elle offre une voix visuelle élégante pour les compositions graphiques sans perturber le chrome fonctionnel. (06 October 2026)
+- 06 October 2026 : USAGE CSS ET HIÉRARCHIE. Déclarée sous `--zr-police-display: 'Vogun Med', 'Vogun Medium', serif;` pour les grands titres et éléments de mise en valeur, en complément du trio système normatif (`InterVariable` en interface, `AnthropicSerif` en éditorial et nombres, `AnthropicMono` en données techniques). (06 October 2026)

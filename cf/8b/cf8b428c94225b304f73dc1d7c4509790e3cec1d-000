@@ -1,0 +1,388 @@
+# La boîte à outils : réglages mesurés et commandes qui marchent
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Engineering playbook, measured settings and paid incidents.
+>
+> **Vocabulaire déclencheur (96 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> parallélisme · parallèle · cores · coeurs · cpu · xargs · make -j · multiprocessing · threads · batch · lot · conversion · avif · webp · png · jpeg · image · compression · crf · encodage · ffmpeg · vidéo · hls · dash · streaming · segment · jsdelivr · cdn · quota · rate limit · api github · rest · fetch en boucle · cache · git add · commit · push · gh001 · gros fichier · 100 mo · script · scripts · dossier scripts · nommage · pascalcase · numérotation · tranchage · chantier · tmp · downloads · vercel · 402 · déploiement · deploy · cloudflare · pages · wrangler · asr · reconnaissance vocale · whisper · parakeet · transcription · sous-titres · srt · workflow · agents · subagent · transcript · limite de session · inline · vérifiable · vérificateur · test · preuve · code de sortie · json · parallelism · worker pool · batch convert · encoding · hardware encoder · video pipeline · adaptive streaming · cdn cache · api quota · rate limiting · bulk write · sparse checkout · naming convention · zero padding · deployment · speech to text · subtitles · agent workflow · verifier · exit code
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/Design/Design1.md`
+> - `~/.claude/Memory1/AudioProductions/Audio1.md`
+> - `~/.claude/Memory1/Stock/Stock1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## Parallélisme maximal (RÈGLE ABSOLUE)
+
+**Machine : Mac M5 Max, 18 cores. Objectif : 95% CPU utilisé = 16-17 cores actifs minimum sur toute tâche lourde.**
+
+**Distinction fondamentale : CPU local vs agents LLM.** Ce ne sont pas les mêmes économies.
+
+- **CPU local (ffmpeg, build, conversion, find, xargs, scripts Python) : coût marginal nul.** Les cores tournent déjà, les utiliser en parallèle ne coûte rien de plus. Donc parallélisme obligatoire dès que possible, sans demander.
+- **Agents LLM (subagents Claude Code) : coût marginal réel.** Chaque agent consomme ses propres tokens (démarrage à froid, lecture du brief, génération). Lancer 4 agents au lieu d'1 peut multiplier le coût par 3-4 pour un gain de temps modéré. Donc parallélisme = choix explicite passé par le plan validé, jamais un default auto.
+
+### CPU local : parallèle systématique (sans plan, sans demander)
+
+**Règle Bash parallel :** tout appel Bash indépendant dans un même turn = calls parallèles. Jamais de séquence quand l'ordre ne compte pas.
+
+### Shells et scripts système
+
+Utiliser systématiquement les flags de parallélisme :
+
+```bash
+# Fichiers / conversion
+xargs -P16 -I{} ffmpeg ...           # conversion batch vidéo/audio
+mogrify -set numthreads 16 ...       # ImageMagick batch
+parallel -j16 ...                    # GNU parallel
+
+# Python
+multiprocessing.Pool(processes=16)
+concurrent.futures.ProcessPoolExecutor(max_workers=16)
+asyncio pour I/O-bound
+
+# Build / compilation
+make -j16
+cmake --build . --parallel 16
+npm run build -- --workers 16
+
+# ffmpeg explicite
+ffmpeg -threads 16 ...
+
+# find + traitement
+find . -type f | xargs -P16 -n1 command
+```
+
+### Domaines CPU local (parallèle systématique sans demander)
+
+- Conversion de fichiers (vidéo, audio, image, 3D) → toujours `-P16` ou équivalent
+- Automation tasks bash/python → décomposer en workers parallèles
+- Rendu / baking → toujours max threads
+- Git operations batch → parallel
+- find / grep / xargs → `-P16` ou équivalent
+- **Sur du CPU local : si ça peut être parallélisé, ça l'est.** Cores inactifs = perte sèche.
+
+### Agents LLM : parallélisation par décision consciente (passe par le plan)
+
+Pour tout travail décomposable en N sous-tâches LLM indépendantes (rédaction multi-sections, traduction par chunks, recherche multi-sources, code multi-fichiers, exploration multi-zones), le choix séquentiel vs parallèle est arbitré dans le plan soumis à Matthieu, avec estimation chiffrée :
+
+- 1 agent qui traite tout : moins de tokens, plus cohérent stylistiquement, plus lent en wall time
+- N agents en parallèle : plus rapide en wall time, N× les tokens, risque léger de divergence entre les sorties
+
+**Défaut sans instruction contraire :** 1 agent unique bien briefé, sauf si :
+1. Le wall time est explicitement critique (Matthieu dit "ultra rapide", "urgent", "tout de suite") OU
+2. Le volume total ferait exploser le contexte du main thread OU
+3. Matthieu a validé le mode parallèle dans le plan
+
+**Ne PAS paralléliser :** tâches séquentielles où B dépend du résultat de A.
+
+### Principe
+
+Sur CPU local : un résultat en 3 min sur 16 cores vaut mieux qu'un résultat en 30 min sur 1 core. La vitesse **est** de la qualité.
+
+Sur agents LLM : la vitesse coûte des tokens. Cramer des tokens pour aller vite est parfois la bonne décision, mais c'est un arbitrage à présenter, pas à imposer.
+
+---
+
+## AVIF — sweet spot CRF 25 (validé empiriquement 2026-05-22)
+
+Pour toute conversion d'images en AVIF, utiliser **CRF 25** (= `avifenc --min 25 --max 25`).
+
+Bench réel sur 30 samples mixtes (jpg/png/webp) :
+- CRF 20 : 60% des fichiers gagnent en taille (le reste = AVIF plus gros)
+- CRF 23 : 80%
+- **CRF 25 : 100% des fichiers gagnent, gain 88%** ← sweet spot
+- CRF 27 : 100%, gain 89% (1% de mieux mais qualité moindre)
+
+Encoder le plus rapide pour stills = **avifenc --speed 10 --jobs 1** (~3x plus rapide que ffmpeg+libsvtav1 preset 8). SVT-AV1 reste optimal pour vidéo, AOM via avifenc reste optimal pour images.
+
+Pipeline batch type : `xargs -P 16` × `avifenc --min 25 --max 25 --speed 10 --jobs 1`. Pour WebP en entrée, décoder via ffmpeg en PNG temp d'abord.
+
+## Plugins et outils installés sur ce Mac
+
+Indexés ici pour référence rapide. Sources sur GitHub : https://github.com/matthieuhuguet/
+
+| Outil | Repo | Statut | Emplacement |
+|---|---|---|---|
+| anthropic-fonts | anthropic-fonts | Actif | `~/Library/Fonts/` — 35 TTF (Sans/Serif/Mono, poids 300-800) |
+| EagleMarkdownViewer | EagleMarkdownViewer | Actif | Eagle plugin `813cd142-d78f-490e-89af-329f198f4a96` — preview .md dans Eagle |
+| EagleAnthropicFont | EagleAnthropicFont | Actif (asar patché 2026-05-22) | Plugin `~/Library/Application Support/Eagle/plugins/anthropic-font/` + injection dans `app.asar` |
+| autoupdate (sync unique) | — | Actif | `~/.claude/autoupdate.mjs` + `com.zenray.autoupdate.plist` — SEUL job de sync : watch + commit + push de `~/.claude` ET `Memory`, debounce 10 min, skip fichiers >100 Mo (GH001) |
+| claude-sync (4 anciens jobs) | claude-sync | DÉPRÉCIÉ (2026-06-11) | `_deprecated/` des repos claude-sync + Memory/Tools/MacMiniServer. Remplacés par autoupdate seul. Cause : 2 jobs × 30 s poussaient les mêmes repos → .git de ~/.claude gonflé à 27 Go → pack-objects 27 Go en RAM = freezes. Historique squashé à 325 Mo |
+| claude-code-progress-md | claude-code-progress-md | Appliqué | Convention PROGRESS.md — snippet dans tous les CLAUDE.md, règles dans ce fichier |
+
+## JAMAIS `git add -A` DANS `~/.claude` (règle, incident payé 2026-07-30)
+
+Dans ce dépôt-là et nulle part ailleurs, **on ne stage que des chemins explicites**. `git add -A`
+depuis un sous-dossier stage l'arbre entier, or `projects/` contient les transcrits de conversation,
+qui dépassent régulièrement les 100 Mo. GitHub refuse le push par `GH001` et le commit reste coincé
+en local, où il bloque tout ce qui suit.
+
+C'est exactement ce que `autoupdate.mjs` évite en sautant les fichiers de plus de 100 Mo. Un
+`git add -A` manuel contourne cette protection sans le dire, et l'incident du 2026-07-30 a staged
+trois transcrits de 420, 174 et 170 Mo pour publier deux fichiers de mémoire de quelques kilo-octets.
+
+**La forme juste :** `git add -- <chemin> <chemin>` puis commit. Si le push échoue quand même en
+`GH001`, le commit fautif est local et non publié : `git reset --soft HEAD~1`, `git reset`, puis
+re-stager les seuls fichiers voulus. Vérifier que `HEAD` est bien le sien avant de remonter d'un cran.
+
+### Notes d'installation
+
+**EagleAnthropicFont** : asar patché OK (2026-05-22). Backup pristine dans `app.asar.bak`. Si re-install nécessaire (ex. mise à jour Eagle), 2 bugs du install.sh upstream à fixer avant exécution :
+- L67 ajouter avant `asar extract` : `[[ -e "$EAGLE_RES/app.asar.bak.unpacked" ]] || ln -sf "$UNPACKED_BAK" "$EAGLE_RES/app.asar.bak.unpacked"`
+- L120 remplacer `app.asar.clean.unpacked` par `app.asar.new.unpacked`
+
+Rollback en cas de crash : `cd /Applications/Eagle.app/Contents/Resources && cp app.asar.bak app.asar && rm -rf app.asar.unpacked && cp -R app.asar.unpacked.bak app.asar.unpacked && rm -f app.asar.bak.unpacked`.
+
+**Sync Claude (refactor 2026-06-11)** : un SEUL job (`com.zenray.autoupdate` → `~/.claude/autoupdate.mjs`) couvre tout : `~/.claude` (dont conversations `projects/`) + `Memory`, push sur changement avec debounce 10 min, skip auto des fichiers >100 Mo. Les 4 anciens jobs (claude-sync, git-drive-sync, conversations-backup, sessions-sync) sont déchargés (`launchctl unload -w`) et archivés dans `_deprecated/`. NE PAS les réactiver : c'est eux qui ont gonflé `.claude/.git` à 27 Go (bombe RAM). sessions-sync (multi-compte) : sans objet à 1 compte ; si 2ème compte un jour, repartir de `_deprecated/sessions-sync` en CONSCIENCE.
+
+---
+
+## Récupérer des fichiers précis d'un repo GitHub sans tout cloner (2026-06-01)
+
+Pour aller chercher UN ou QUELQUES fichiers précis dans un repo GitHub (pratique pour moi en global, et pour générer des liens de téléchargement) :
+
+- **Registry npx** : `npx shadcn add <user>/<repo>/<item>` — n'importe quel repo GitHub avec un `registry.json` devient un registry installable (composants, configs, docs, rules, agents…). « Git is all you need » (rauchg). Permet de distribuer/récupérer des items ciblés via la CLI.
+- **Sparse-checkout** quand pas de registry : `git clone --filter=blob:none --sparse <url>` puis `git sparse-checkout set <path>` → ne récupère que les fichiers voulus, pas tout le repo.
+- **Fichier public unique** : URL raw GitHub ou jsDelivr (`https://cdn.jsdelivr.net/gh/<user>/<repo>@<commit>/<path>`) = lien de téléchargement direct, cache CDN immuable.
+
+Usage : (a) moi, chopper un fichier précis dans un gros repo sans clone complet ; (b) générer des liens de téléchargement terminal pour un fichier qu'un utilisateur veut (repo public → jsDelivr/raw/npx). RÈGLE : ne jamais cloner un gros repo entier pour 1 fichier ; cibler.
+
+## Ne jamais se faire bloquer par la limite de sous-agents (2026-06-02)
+
+Quand un Workflow / Agent renvoie « You've hit your session limit » (fenêtre 5h) avec 0 token : la limite porte sur le **spawn de sous-agents**, PAS sur la boucle principale (qui répond encore). NE PAS boucler des reprises (no-op, 0 token, perte de temps + contexte).
+
+**Fallback obligatoire — voie inline :** le design déjà produit est en cache (rejoué gratuitement à la reprise) ; je le LIS (transcripts du run, ou ma propre connaissance de l'archi) et j'**implémente moi-même dans la boucle principale**, pièce par pièce, build vert + commit à chaque étape. La boucle principale n'est pas gatée → il y a TOUJOURS une voie pour avancer. Penser comme un hacker : ne jamais rester bloqué, contourner par l'inline.
+
+Au plus tôt, journaliser l'avancement dans PROGRESS.md (survit à la compaction du contexte).
+
+## Ne jamais perdre le transcript des agents (2026-06-02)
+
+Le travail produit par un Workflow / une team d'agents (le **texte de sortie** de chaque agent, ses décisions, son code, son design) est un actif coûteux à régénérer. Il ne doit JAMAIS être perdu entre deux tours, deux compactions ou deux sessions.
+
+**Règle :** dès qu'un agent (ou une phase de workflow) rend un résultat substantiel, je le **persiste sur disque immédiatement**, avant tout autre chose :
+- design / plan / décisions → un fichier `docs/<sujet>-design.md` dans le repo concerné
+- code produit → committé (build vert) ou écrit dans le fichier cible sans attendre
+- synthèse de fin de workflow → entrée PROGRESS.md + fichier dédié si volumineux
+
+Le contexte conversationnel n'est PAS un stockage fiable (compaction, fenêtre pleine). Le disque l'est. Si un workflow tourne en plusieurs phases, chaque phase écrit son livrable sur disque à la fin de la phase, pas à la fin du workflow. Ainsi une coupure ne fait jamais perdre plus d'une phase.
+
+Le `runId` d'un Workflow permet la reprise par cache (`resumeFromRunId`), mais c'est un filet, pas la sauvegarde primaire : la sauvegarde primaire est le livrable écrit sur disque.
+
+**Écriture disque par agent — enforcement (RÈGLE GLOBALE, 2026-06-24).** Dans CHAQUE workflow de type agent, le prompt de chaque agent inclut l'ordre explicite : « avant de retourner ta réponse, écris-la INTÉGRALEMENT dans `<dossier>/<nom>.md` via ton outil Write, pour qu'elle ne soit jamais perdue ». Ainsi la donnée survit même si une étape ultérieure (verify, synthèse) plante ou qu'un plafond coupe le run : un `pipeline` peut renvoyer un résultat vide (`researchedCount:0`, items filtrés à `null`) alors que les agents ont déjà produit leur travail sur disque. Corollaire : après tout workflow échoué ou partiel, vérifier les fichiers écrits ET les transcripts `subagents/.../agent-*.jsonl` (extraction via `Scripts/extract_workflow_outputs.py`), jamais seulement le résultat retourné.
+
+## Reconnaissance vocale japonaise : DÉJÀ installée sur ce Mac (2026-08-13)
+
+Ne jamais réinstaller ni retélécharger, et ne jamais partir chercher un service en ligne : tout est
+local, gratuit et prêt.
+
+**Environnement permanent :** `~/.venvs/asr-ja` (à activer, jamais à recréer)
+
+```bash
+source ~/.venvs/asr-ja/bin/activate
+```
+
+Il contient `parakeet-mlx`, `mlx-whisper`, `fugashi`, `unidic-lite`, `jaconv`.
+
+**Modèles déjà téléchargés** dans `~/.cache/huggingface/hub` (~9 Go, ne pas purger à la légère) :
+`mlx-community/parakeet-tdt_ctc-0.6b-ja` (japonais, 156x le temps réel, horodatage mot par mot),
+`mlx-community/whisper-large-v3-turbo` (90x, segments ponctués), `mlx-community/whisper-large-v3-mlx`
+(mesuré 10x plus lent que turbo pour MOINS de texte : gardé pour mémoire, à ne pas réutiliser).
+
+Les autres environnements audio du dossier `~/.venvs/` existent aussi et sont documentés par leurs
+skills : `deecho-audio`, `dfn3`, `resemble-enhance`, `voicefixer`, `wpe-audio`.
+
+Méthode complète, arbitrage et pièges : skill `translate-srt-selectlanguage`, mode 3.
+
+**Limite connue de ce Mac :** `ffmpeg` y est compilé SANS libass, donc il ne sait pas incruster de
+sous-titres (`-vf subtitles=...` échoue). Pour un aperçu de rendu, composer avec Pillow, ou installer
+un ffmpeg avec libass en connaissance de cause.
+
+## Scripts — toujours dans un dossier Scripts/ (RÈGLE GLOBALE, 2026-06-04)
+
+Tout script Python (ou shell) produit dans un projet va dans un sous-dossier `Scripts/` à la racine du projet. **Jamais uniquement dans `/tmp/`** — `/tmp/` est effacé entre les sessions, le script est perdu.
+
+**Règle :** dès qu'un script est écrit ou modifié → le sauvegarder dans `<racine_projet>/Scripts/<nom>.py`. Pas après. Immédiatement.
+
+---
+
+## Conventions d'organisation : PascalCase et règle du tranchage (2026-01-20)
+
+**Organisation et nommage des fichiers de projet :**
+- Utiliser le **PascalCase** systématique pour les dossiers, fichiers de code, nœuds de graphes, fonctions et variables dans les projets créatifs et techniques.
+- Réserver les underscores aux dates (format `YYYY-MM-DD`) et aux préfixes d'assets reconnus.
+
+**Règle du tranchage pour les séries et indexations :**
+- Utiliser le Double Digit (`01`, `02`) par défaut pour tout ensemble prévu à moins de 100 éléments.
+- Basculer immédiatement au Triple Digit (`001`, `002`) dès qu'il existe plus de 10% de probabilité que le volume dépasse 99 éléments. Trancher dès le premier élément pour bannir tout renommage ultérieur.
+
+---
+
+## Quotas d'API distantes : jamais de fetch en boucle sans voie hors-quota + cache + lazy (RÈGLE GLOBALE, incident payé 2026-07-20)
+
+Incident réel : une boucle `readJson()` (API GitHub contents, quota 5000/h) sur tous les manifestes d'un index (17k requêtes) a épuisé le quota REST, déclenché la DDoS Mitigation Vercel et mis le site ZenRayProgress ENTIER en 403 pendant ~1h (IP de Matthieu bloquée).
+
+**Règle :** avant tout code qui fetch en boucle sur N éléments, vérifier : (1) existe-t-il une voie HORS quota (CDN, raw, index pré-généré) ? l'utiliser ; (2) cache long (≥5 min) obligatoire ; (3) déclenchement lazy (au clic, jamais au mount) ; (4) borner N. Une lecture qui ne sera pas suivie d'une écriture ne paie JAMAIS le prix d'une lecture d'édition (sha, token, quota). Détail projet : CLAUDE.md de ZenRayProgress, section « INCIDENT PAYÉ 2026-07-20 ».
+
+## Modif ciblée = une seule commande chaînée Python + build + git (RÈGLE GLOBALE, 2026-07-20)
+
+Pour une **petite modification ciblée** (ex. changer une taille de police, une couleur, une valeur de variable CSS, un texte, un chiffre) dans un fichier déjà identifié : préférer **une seule commande shell chaînée avec `&&`** plutôt que d'ouvrir/éditer plusieurs fichiers en détail avec les outils d'édition classiques.
+
+**Séquence type :**
+1. Script Python (heredoc `python3 - <<'EOF' ... EOF`) qui lit le fichier, fait le remplacement précis (`old` → `new`), et **assert** explicitement que la chaîne `old` a bien été trouvée avant d'écrire (sinon `raise SystemExit` avec message clair — jamais un remplacement silencieux qui échoue sans le dire).
+2. Build du projet (`npx vite build`, `npm run build`, etc.).
+3. `git add <fichiers précis>` (jamais `-A` ni `.`).
+4. `git commit -m "..."` avec message détaillé.
+5. `git push`.
+
+Le tout enchaîné avec `&&` : si une étape échoue (assert Python, build cassé), les étapes suivantes ne s'exécutent pas — donc jamais de commit/push sur un état cassé ou une modif qui n'a pas eu lieu.
+
+**Pourquoi :** rapide, reproductible, et généralement plus économe en tokens que l'ouverture et l'édition détaillée de plusieurs fichiers (pas de lecture complète de fichier, pas d'aller-retour outil par outil).
+
+**Limite stricte :** cette méthode ne s'applique QUE si la modification est **simple, localisée, vérifiable et sans ambiguïté** (une valeur, une ligne, un pattern qui apparaît une seule fois et sans risque de mauvaise cible). Dès que la modification touche plusieurs endroits non triviaux, demande du raisonnement sur la structure du code, ou présente un risque de remplacement ambigu (pattern non unique, contexte flou) → revenir aux outils d'édition standards (Read/Edit), plus sûrs pour ce cas.
+
+## Streaming vidéo sur le site via HLS + GitHub + jsDelivr (2026-06-04)
+
+Pattern récurrent ZenRay pour servir une vidéo de démo sur le site (matthieuhuguet.com, repo ZenRayWebsite, stack Vite/React) sans alourdir le site ni servir un gros MP4 4K en direct (trop lent). Complète la note "Récupérer des fichiers d'un repo GitHub via jsDelivr" du 2026-06-01 : ici c'est le même couple GitHub + jsDelivr appliqué à de la **vidéo en streaming adaptatif HLS**.
+
+### Architecture (loi)
+
+- **Le site n'héberge AUCUNE vidéo.** Il ne porte que le **poster** (thumbnail SVG) + l'URL jsDelivr du manifest. Pas de MP4 ni de .ts dans ZenRayWebsite. Si un demo.mp4 résiduel traîne, le supprimer.
+- **La 4K source reste INTACTE, jamais écrasée.** Le HLS est dérivé, l'original est l'archive.
+- **Streaming HLS adaptatif** (qualité auto selon la connexion), pas de fichier monolithique servi en direct.
+- **Repo GitHub PUBLIC dédié** pour la vidéo (jsDelivr exige un repo public). Nom : `ZenRayWebsite-HLS`. **Ne PAS réutiliser** un repo média existant chiffré AES (type zenray-vid-NN) : le HLS doit rester en clair pour être lisible par le CDN.
+- **Un sous-dossier par projet** dans le repo HLS : `ZenRayProgress/master.m3u8`, etc. Plusieurs projets cohabitent dans le même repo public.
+- Pas de fuite de nom média (note du 2026-06-01) : `ZenRayWebsite-HLS` est un repo de **code/asset web public**, le nom de projet (ZenRayProgress) est déjà public sur le site, donc autorisé en clair. La règle anti-fuite vise les médias privés (zenray-vid/img/data), pas ces assets web publics assumés.
+
+### jsDelivr (figer le commit, sinon cache périmé)
+
+- URL : `cdn.jsdelivr.net/gh/<user>/<repo>@<ref>/<path>`.
+- **Figer `@<commit-sha>`, JAMAIS `@main`.** jsDelivr cache ~7 jours : sur `@main`, un re-upload sert l'ancienne version. Le site pointe un SHA immutable (ex. `@cc01c3d/ZenRayProgress/master.m3u8`). À chaque re-génération HLS : nouveau commit, puis mettre à jour le SHA dans le site.
+
+### Génération HLS (ffmpeg)
+
+- Script dans `Scripts/make_hls.sh`. Ladder 4 qualités : **360p / 720p / 1080p / 2160p (4K)** via `var_stream_map`. Playlists de variante nommées `stream.m3u8`.
+- **Segments ≤ 3 Mo.** `hls_time=2` (segments de 2 s, max ~2,3 Mo en 4K). 4 s donnait des segments trop gros (~4 Mo) : re-découper à 2 s.
+- **Keyframes alignées** sur la découpe : `-g = fps * hls_time` (sinon segments mal coupés).
+- **Ne JAMAIS `rm -rf` le dossier de sortie s'il contient un `.git`** (c'est le clone du repo HLS). Suppression sélective des anciens segments/manifests, jamais du `.git`.
+
+### Lecteur HLS côté site (HlsVideo dans ArticleRenderer.jsx)
+
+- **Charger `hls.js` EN PREMIER** (Chrome/Firefox/Edge via MSE, dynamic import), **HLS natif seulement en fallback** (Safari/iOS).
+- **Ne PAS se fier à `video.canPlayType('application/vnd.apple.mpegurl')` en premier** : Chrome répond `"maybe"` mais ne sait pas lire nativement → erreur "no supported source". Tester `Hls.isSupported()` d'abord.
+- **Sélecteur de qualité maison** (Auto / 360p / 720p / 1080p / 4K, façon YouTube) : les contrôles `<video>` natifs n'en ont pas. Il pilote `hls.currentLevel` (**-1 = Auto / ABR**).
+- **Vidéo embarquée DANS le mockup fenêtre macOS** (MacWindow), pas une vidéo nue. Le bloc reste de type `videoPlaceholder`, c'est le rendu qui injecte la vidéo.
+- **Plein écran ne recadre pas** : passer de `object-fit: cover` à `contain` (+ fond noir) sur `fullscreenchange` (sinon la 4K est rognée en plein écran).
+
+### Debug
+
+- Page de debug dédiée (`hls-debug.html`) qui affiche à l'écran les logs réseau/lecture du lecteur + des commandes terminal pour vérifier que GitHub et jsDelivr servent bien les fichiers (curl HTTP 200 sur le manifest et un segment).
+
+### Déploiement
+
+- Push sur `master` → **auto-deploy Vercel** (projet zenray-productions, Production). Vérifier le site en prod une fois le build terminé.
+- Tagline du reel passée de "Your computer, in a tab." à **"Every files, in a tab."**
+- Storyboard : réutiliser le storyboard existant plutôt que repartir de zéro (reel ~30 s calqué sur la pub Anthropic "Before we ship a Claude model" : 3 phrases serif animées, aucune voix, piano + tension).
+
+### Design de la page landing (DA ZenRayProgress, à réutiliser)
+
+- **Mode landing** déclenché par la présence d'un bloc `prospectWidget` dans l'article.
+- **Polices du trio** : Sans (Inter Regular 400), Serif (AnthropicSerif 350), chiffres (AnthropicSerif Regular 400), Mono (AnthropicMono). Hero **deux-tons** : 1re ligne en Sans, 2e ligne (après la virgule) en **Serif italic** — signature visuelle calquée sur les pubs Anthropic.
+- **Hero** : dégradé bleu vertical `#6fb6ed → #4371ee`. Accent du site coral→rose `#F38A5C → #E27687`. CTA noir `#0b0b0c` en pilule (radius 99).
+- **Cartes** (le "agrandissement de carte") : largeur de lecture maxWidth 680, fond blanc, borderRadius 18 (paragraphe) / 22 (widget), ombre douce. Contenu centré maxWidth 960.
+- **Fenêtre macOS (MacWindow)** : maxWidth 860, remonte sur le hero via marge négative (`clamp(-72px,-9vw,-112px)`) = chevauchement volontaire, borderRadius 16, barre de titre 36px + 3 pastilles, ombre bleutée `0 40px 90px -28px rgba(40,60,140,0.45)`. C'est elle qui porte la vidéo.
+
+## Cloud ZenRayProgress et purge temporaire (2026-07-26)
+
+- Dans ce contexte, « cloud » désigne le site ZenRayProgress, sous `Create`, jamais un service tiers implicite.
+- Avant toute purge de worktrees temporaires ZenRayProgress : `git fetch` du dépôt principal, HEAD égal à `origin/main`, aucun writer actif, puis pour CHAQUE clone candidat : HEAD valide, statut propre et aucun commit local en avance. Supprimer uniquement les chemins vérifiés ; un clone incomplet ou ambigu reste intact jusqu'à diagnostic séparé.
+- Pour un lot média, trier localement en `Videos/`, `Photos/` et `Other/` avant l'upload. Seuls les types reconnus par `kindForName()` partent vers le cloud ; les inconnus restent dans `Other/` local tant qu'un pipeline explicite n'existe pas.
+
+## Réanimation Vercel Hobby sans paiement (2026-07-26)
+
+Si un site ZenRay renvoie `HTTP 402` et `x-vercel-error: DEPLOYMENT_DISABLED`, réactiver le projet existant avant tout redéploiement :
+
+1. `vercel project inspect <projet> --scope zenrays-projects` pour obtenir le project ID.
+2. Lire sans les afficher le token de `~/Library/Application Support/com.vercel.cli/auth.json` et `currentTeam` dans `config.json`.
+3. Appeler `POST https://api.vercel.com/v1/projects/<projectId>/unpause?teamId=<teamId>` avec le Bearer token.
+4. Attendre la propagation, puis vérifier le domaine et l'URL Vercel avec `curl`.
+
+Projets connus : `zenray-shards` = ZenRayProgress ; `zenray-productions` = `matthieuhuguet.com`.
+
+Le `unpause` restaure gratuitement un déploiement `READY`, mais ne remet pas le quota Hobby à zéro. Le site peut être suspendu de nouveau. Si un redeploy échoue en `402 fair use limits` alors que l'ancien déploiement répond `200`, conserver celui-ci et ne pas boucler.
+
+
+---
+
+
+## 9 October 2026 : la solution la plus rapide d'abord, timeouts courts (mots de Matthieu, 9 October 2026)
+
+- 9 October 2026 : « ARRETE DE FAIRE DES TIMEOUT AUSSI LONG SUR HOUDINI CYCLES EN 2-3 SECONDES GRAND MAX ... POUR LE DEBUG LA VUE OBJ SUFFIT LARGEMENT ... essaie toujours de mettre en place la solution la plus rapide : priorite 0 ». Il a perdu un temps fou sur des appels `houdini_hom` a `timeout: 400000` qui lancaient des rendus Cycles de 15 a 60 secondes pour des controles qu'une mesure ou une capture OBJ donne en une seconde. (9 October 2026)
+- 9 October 2026 : regle. Avant chaque appel : y a-t-il une voie en 2 a 3 secondes ? Ordre de preference : (1) une mesure par script dans Houdini (comptes, bornes UV, etirement, classes d'attributs, verificateur `UvCheck.py`) ; (2) une capture de la vue OBJ par flipbook OpenGL ; (3) un rendu Cycles d'UNE image basse resolution (640 x 400) pour la verification finale seulement. Timeout par defaut 5 secondes (`timeout: 5000`), 20 secondes au plus pour un recalcul de graphe ; jamais 120000 ou 400000. Si un recalcul depasse, c'est un signe qu'il faut une methode plus legere, pas un timeout plus long. (9 October 2026)
+- 9 October 2026 : un appel qui part en arriere-plan (« moved to the background ») est une faute de vitesse : le noter et reduire la charge. Ne jamais lancer plusieurs rendus dans un meme appel. (9 October 2026)
+
+## 11 October 2026 : attendre un processus par son numéro, jamais par `pgrep -f` sur son nom
+
+- 11 October 2026 : piège payé sur zenray-height. Une boucle `until ! pgrep -f "Script.py Nom"; do sleep 5; done` trouve son propre shell, dont la ligne de commande contient le même texte ; elle ne finit donc jamais, alors que le calcul attendu est terminé. Matthieu a vu cinq tâches « en cours » pendant vingt minutes. (11 October 2026)
+- 11 October 2026 : la forme juste. Lancer avec `nohup ... & echo $! > run.pid`, puis attendre avec `while ps -p $(cat run.pid) >/dev/null; do sleep 5; done`. Un filtre `grep "[S]cript"` évite aussi l'auto-détection, mais le numéro de processus est plus sûr. (11 October 2026)
+
+## 12 October 2026 : les pushes GitHub de données, le plafond de dépôt, la preuve de déchargement et l'échelle CMAF (décisions de Matthieu, 12 October 2026)
+
+- Ses mots (12 October 2026), grammaire seule : « Je veux maximiser la quantité de données envoyées par chaque git push, sans jamais dépasser la limite officielle de GitHub de 2 Gio. » Et : « Un seul échec peut être accidentel (réseau, timeout, serveur GitHub), donc réduire immédiatement serait trop réactif. Trois échecs risquent en revanche de gaspiller plusieurs minutes à retransmettre jusqu'à 1 900 Mio. Je recommande également de compter les échecs par lot plutôt que par fichier. » (12 October 2026)
+- Lots (12 October 2026) : objectif 1 900 Mio par push, soit 20 parts de 95 Mio (plus 16 octets chacune), 7,2 % sous la limite APPLIQUÉE de 2 Gio (2 048 Mio), lots remplis au maximum ; avant chaque push, total des parts plus surcoût Git, et taille réelle du pack lue sur la ligne « Writing objects » quand c'est possible. (12 October 2026)
+- Échecs (12 October 2026) : comptés par lot, un seul est retenté à l'identique, au troisième retour à l'ancienne règle de 190 Mio (2 parts), puis remontée progressive après 3 réussites consécutives ; échelle de référence 2, 4, 8, 12, 16, 20 parts, départ à 8. Jamais deux pushes simultanés vers le même dépôt ; le lot suivant se prépare pendant l'envoi et part dès la confirmation. On maximise le débit réel moyen, jamais la taille du push. (12 October 2026)
+- Plafond de dépôt (12 October 2026) : archives privées à 4 096 Mio, soit 43 parts par dépôt au lieu de 21, pour diviser par deux les créations de dépôts, qui sont ce qui déclenche les vagues de 403 « secondary rate limit ». Films NOUVEAUX seulement. L'incident du 10 June 2026 (pushes amenant un dépôt vers 4 Go rejetés) est contredit par des dépôts de 9,7 à 10,4 Go qui acceptent des pushes le 12 October 2026 (champ `size` de l'API GitHub). (12 October 2026)
+- Preuve (12 October 2026) : l'autorité de déchargement d'un original est la preuve par identité d'objets (manifeste en ligne, une vraie part relue, 1 film sur 8 relu en entier), pas la relecture SHA-256 complète systématique ; Assets et Progress. Un faux « vérifié » supprime un original : tests verts sur un bon cas et rouges sur un cas corrompu. (12 October 2026)
+- CMAF (12 October 2026) : copie directe d'abord ; sinon transcodage par puissances de 2 en Mbit/s, source 4K : 16 puis 8, 4, 2 ; autre source : 8 puis 4, 2 ; chaque segment sous 19 Mio (limite jsDelivr de 20 Mo par fichier) ; mêmes lots d'octets que l'archive. (12 October 2026)
+- Où : paramètres dans `scripts/lib/push-batch-policy.mjs` du dépôt ZenRayProgress ; règles épinglées dans `Memory1/Projects/zenray-progress/Rules.md` et `Memory1/Projects/zenray-assets-v2/Rules.md` ; test de garde qui échoue si un script de téléversement pousse hors de la politique. (12 October 2026)
+
+## 13 October 2026 : workflows bannis pour l’instant, mots de Matthieu corrigés pour la grammaire et la dictée
+
+Ne jamais réutiliser les workflows à l’avenir, ou alors me faire une double confirmation, parce que dernièrement j’ai utilisé Claude Code sur les workflows et le problème, c’est que ça a utilisé toute ma limite de tokens en même pas cinq minutes pour une session à 20 € et en à peine une vingtaine de minutes pour une session à 90 € par mois. (13 October 2026)
+
+Donc, en fait, les workflows pour l’instant sont bannis et il faut faire en sorte de travailler séquentiellement, sinon on ne peut pas arriver à des résultats satisfaisants parce que les workflows prennent beaucoup trop de compute d’un coup et ce n’est pas tenable sur le long terme. (13 October 2026)
+
+Après, lors de la génération de très, très gros logiciels, parfois les workflows sont indispensables. Je pense à ZenRay 8 ou encore à ZenRay Motion Design, qui ont dû nécessiter énormément de tokens, et c’est vrai que même en séquentiel, il aurait été extrêmement dur d’arriver à ces résultats. Cependant, la génération de workflows est beaucoup trop coûteuse, donc j’aimerais vraiment quasi jamais l’utiliser. (13 October 2026)
+
+Il vaut mieux utiliser plusieurs sessions et réfléchir vraiment atomiquement à exactement ce qu’on veut de manière séquentielle plutôt que de traiter la tâche une fois en parallèle et arrêter de réfléchir, parce que ce n’est pas tenable économiquement pour l’instant. (13 October 2026)
+
+À terme, je pense qu’on pourra viser d’avoir deux Claude Code à 90 € par mois, même si ça représente une très, très forte dépense, voire un seul Claude à 200 € par mois ; ce serait plus intelligent pour avoir le x20, mais pour l’instant, économiquement, ce n’est pas tenable du tout. Il faudrait débloquer un revenu d’au moins 5 000 à 10 000 € par mois avant de se le permettre, donc ce n’est pas tenable du tout pour l’instant. (13 October 2026)
+
+## 13 October 2026 : consignes historiques de conservation des agents
+
+**ID des subagents, noté dès le lancement (2026-09-23, demande de Matthieu).** Avant que les
+transcripts ne se perdent, noter l'ID de chaque subagent qui tourne, sa tâche, le chemin de son
+transcript (`~/.claude/projects/<projet>/<session>/subagents/agent-<id>.jsonl`) et celui de son
+livrable dans le `state.json` du chantier, puis copier les transcripts dans `transcripts/` du
+chantier. But : pouvoir TOUJOURS reprendre depuis les anciens transcripts, ne jamais perdre le
+travail ni les tokens déjà payés.
+
+**Agents et workflows** : chaque agent écrit son livrable sur disque AVANT de retourner sa réponse, car
+le contexte n'est pas un stockage fiable. Une limite de session porte sur le spawn de sous-agents, pas
+sur la boucle principale : il y a toujours la voie inline.
+
+
+## 14 October 2026 : la politique GitHub en langage naturel (décision de Matthieu, 14 October 2026)
+
+- 14 October 2026, POLITIQUE GITHUB EN LANGAGE NATUREL (décidée par Matthieu, mesurée sur Bleach S17E25 et E26). Pourquoi : la ligne montante de Matthieu fait environ 11 Mo/s et GitHub n'est pas ce qui limite, c'est le temps mort entre deux envois ; on cherche donc le débit réel moyen, jamais la taille d'un push pour elle-même. (1) Taille d'un envoi : un push porte 1 900 Mio, soit 20 parts chiffrées de 95 Mio, car GitHub refuse un push au-delà de 2 048 Mio (limite appliquée) et 1 900 laisse 7,2 % de marge ; le lot suivant est préparé pendant l'envoi du précédent et part dès la confirmation, mais jamais deux pushes en même temps vers le même dépôt. Mesuré : 2 pushes de 1 900 Mio à 11,1 et 11,3 Mo/s, 0 échec, contre 6,2 Mo/s avant. (2) Échecs : un échec isolé est accidentel (réseau, délai, serveur GitHub), on réessaie le même lot sans rien changer ; au troisième échec du même lot, on revient à l'ancienne règle de 190 Mio (2 parts) et on remonte par paliers 2, 4, 8, 12, 16, 20 après 3 réussites de lots pleins ; les échecs se comptent par lot, pas par fichier, parce que Git transmet un ensemble. Un push refusé pour sa taille réduit le lot et réessaie sans rien perdre. Le délai d'un push (30 min minimum) n'est qu'un garde-fou contre un envoi figé ; il s'allonge avec la taille du lot. (3) Cadence : GitHub recommande 6 pushes par minute et par dépôt au maximum ; avec des lots de 1 900 Mio on en fait un toutes les 3 minutes, très loin de cette limite. (4) Dépôts : un dépôt d'archive reçoit jusqu'à 4 096 Mio, soit 43 parts, pour deux fois moins de créations de dépôts, car ce sont les créations qui déclenchent les blocages 403 « secondary rate limit » ; uniquement pour les films nouveaux, les anciens manifestes restent lisibles tels quels. Une création bloquée attend la fin du blocage (jusqu'à 60 min) au lieu de faire échouer le film. (5) Vérification avant de décharger un original : on ne relit PAS tout le film depuis GitHub, ce serait un téléchargement massif et un ralentissement contraire au but ; la preuve par identité d'objets suffit (le manifeste est en ligne, les noms et identifiants de chaque part correspondent, une vraie part est relue et déchiffrée), et seul un échec de cette preuve déclenche une relecture complète. Aucun échantillon « 1 film sur 8 » : il vaut 0 par défaut, réglable. (6) CMAF (la copie pour le streaming) : copie directe d'abord, sinon transcodage à 16 puis 8, 4, 2 Mbit/s pour une source 4K, et 8, 4, 2 pour les autres, chaque segment restant sous 19 Mio (limite jsDelivr). (7) Où régler : un seul fichier de paramètres, scripts/lib/push-batch-policy.mjs, avec des variables d'environnement ZR_PUSH_*, et un test de garde qui échoue si un script pousse hors de cette politique. ZR_SHARD_PUSH_BATCH_MB, s'il est défini, désactive la politique (lot fixe) : ne jamais l'épingler dans un script.
+
+- Correction (14 October 2026) : la ligne « Preuve » du 12 October 2026 prévoyait 1 film sur 8 relu en entier ; Matthieu l'a abandonné le 14 October 2026, la preuve par identité d'objets reste seule, relecture complète seulement après un échec. (14 October 2026)
+
+## 14 October 2026 : une phrase, une méthode (Create contre Assets, décision de Matthieu)
+
+- 14 October 2026, UNE PHRASE = UNE MÉTHODE (décision de Matthieu) : avant tout envoi, chargement ou rangement, lancer node ~/.claude/skills/zenray-assets/scripts/route-method.mjs "<la phrase de Matthieu>" ; il rend UNE méthode, ou « AUCUNE MÉTHODE » et alors on pose la question. CREATE est la bibliothèque (l'arbre cloud : films, photos, audio) ; ASSETS est la résidence locale (charger, décharger, restaurer) et les projets de production ; c'est le VERBE qui décide, jamais un nom de dossier : envoie, upload, streaming = Create, avec le worker complet (renommage validé, archive, CMAF, sous-titres, preuve, déchargement) ; charge, décharge, restaure = Assets ; archive le projet = Assets. Les règles de contenu (nom, CMAF, sous-titres, dossier) vivent dans le Rules.md de zenray-progress, celles de résidence (preuve avant suppression) dans Assets.
+
+## 14 October 2026 : pourquoi GitHub bloque la création de dépôts, et la correction
+
+- 14 October 2026, JAMAIS PLUS DE BLOCAGE GITHUB À LA CRÉATION DE DÉPÔTS : la cause mesurée n'est ni le nombre de dépôts (limite 100 000, nous en avons environ 3 000) ni leur taille (des dépôts de 10 Go acceptent des pushes), c'est la limite secondaire GitHub sur la CRÉATION DE CONTENU qui réagit à une rafale : le worker ouvrait un dépôt privé par film, soit 12 dépôts en 4 minutes le 14 October 2026 (07:44 à 07:48 UTC), avec d'autres services du compte qui créaient des dépôts au même moment, puis chaque processus bloqué réessayait toutes les 1 à 5 minutes, ce qui prolonge le blocage. La doc annonce environ 80 créations par minute et 500 par heure (documenté, sujet à changement) ; le seuil réel pour les dépôts est plus bas (non documenté). Correction dans le code : scripts/lib/repo-create-policy.mjs, (1) une voie par processus réutilise son dépôt ouvert tant qu'il reste de la place sous 4 096 Mio, donc 15 petits épisodes tiennent dans 1 dépôt au lieu de 15 ; (2) une porte partagée par toute la machine espace les créations de 2 minutes minimum, 12 par heure au plus, et un blocage vu par UN processus est partagé, les sondes suivantes attendent 5, 10, 20 puis 30 minutes sans que personne d'autre n'envoie de requête. Réglages : ZR_REPO_POOL_SLOTS, ZR_REPO_CREATE_MIN_INTERVAL_S, ZR_REPO_CREATE_MAX_PER_HOUR, ZR_REPO_POOL=0 pour couper la réutilisation. Règle de conduite : ne jamais lancer plusieurs créations de dépôts en parallèle depuis un autre script ; passer par le worker.
+
+## 14 October 2026 : la politique GitHub est dynamique (ligne, volume, blocages), en langage humain
+
+- 14 October 2026, POLITIQUE GITHUB DYNAMIQUE, EN LANGAGE HUMAIN (décision de Matthieu : ta connexion peut changer, un envoi peut passer de 15 épisodes à 150, de 250 Go à 2,5 To, la politique doit rester la plus rapide sans rien retoucher). (1) La taille d'un push suit la ligne MESURÉE : on vise une durée de push, calculée comme la racine de 2 fois le coût fixe d'un push (6 s mesurées) fois le temps moyen entre deux coupures de la ligne, appris des échecs réels (au départ 2 h supposées, chaque coupure vue le fait baisser), bornée entre 60 et 600 s. Sur une ligne rapide et stable, cela donne plus que 1 900 Mio : c'est la limite GitHub de 2 Gio (7,2 % de marge) qui plafonne, donc 20 parts. Sur une ligne lente ou instable, les pushes rétrécissent jusqu'à une part de 95 Mio, car un push raté coûte moins cher quand il est petit ; si la ligne se rétablit, la moyenne (poids 0,3 sur la dernière mesure) ramène les gros pushes en trois pushes environ. La moyenne et le taux de coupure passent d'un processus à l'autre par un fichier d'état (valable 6 h). Les échecs répétés d'un même lot, eux, ramènent toujours à 190 Mio après trois essais. (2) Le budget de créations de dépôts suit le volume : base 12 par heure, relevé à ce que la ligne demande (octets par heure divisés par la taille d'un dépôt, fois 1,5) jusqu'à 24 par heure au plus ; à 25 Mo/s il faut 21 dépôts par heure, un budget fixe de 12 freinerait l'envoi lui-même. Un blocage de GitHub divise le budget par deux (plancher 0,25), il remonte d'un quart après chaque période de 6 h sans blocage : le seuil réel de GitHub étant non documenté, la politique l'apprend. (3) Ce qui reste fixe, volontairement, ce sont les limites de GitHub (2 Gio par push, 100 Mo par fichier, 4 096 Mio par dépôt) et la règle d'ordre : une voie par processus, jamais deux pushes en même temps vers un dépôt. (4) Vérification : un modèle en espérance (scripts/lib/push-policy-simulation.mjs, testé) compare la politique à un lot fixe de 95, 190, 760 ou 1 900 Mio sur des lignes de 0,5 à 40 Mo/s, stables ou instables, de 3 Go à 2,5 To : elle reste à moins de 3 % du meilleur lot fixe partout, et bat nettement un lot fixe de 1 900 Mio sur une ligne lente et instable (9,1 h contre 16,9 h pour 30 Go à 1 Mo/s). C'est un modèle, pas une mesure ; le CMAF double environ le volume envoyé pour un film. Réglages : ZR_PUSH_THROUGHPUT_SIZING (0 = lots par niveau), ZR_PUSH_TARGET_SECONDS (0 = automatique), ZR_PUSH_FIXED_OVERHEAD_S, ZR_PUSH_HICCUP_PRIOR_MTBF_S, ZR_REPO_CREATE_CEILING_PER_HOUR.

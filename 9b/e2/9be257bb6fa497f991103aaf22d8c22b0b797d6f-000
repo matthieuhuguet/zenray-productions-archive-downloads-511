@@ -1,0 +1,754 @@
+# Design1 — Genèse de ClaudeSync, itération par itération
+
+Ce document retrace, dans l'ordre, comment une simple page HTML moche est devenue une vraie petite app macOS jugée « parfaite car très simple et décomplexifiée ». Chaque section = une itération : le **problème de départ**, le **retour de Matthieu**, ce qui a **changé**, et **pourquoi**.
+
+But pédagogique : qu'un lecteur — développeur ou non — comprenne le chemin de pensée, pas seulement le résultat. La leçon centrale : on n'a pas réussi en ajoutant, on a réussi en **retirant** jusqu'à la limpidité.
+
+---
+
+## Point de départ : le vrai problème (pas du design)
+
+Avant toute UI, le besoin réel était technique : les conversations Claude ne se synchronisaient plus.
+
+- **Cause 1 :** le dépôt `~/.claude` n'avait pas de branche « amont » configurée → les sauvegardes se faisaient en local mais ne partaient jamais sur GitHub. Corrigé (`git push --set-upstream`).
+- **Cause 2 :** le délai de sauvegarde était de 10 minutes → trop lent. Ramené à 60 secondes.
+- **Cause 3 (le vrai sujet multi-compte) :** Matthieu a 7 comptes Claude. Le robot qui recopie les conversations entre comptes (`sessions-sync`) avait été rangé par erreur dans un dossier « archivé » le 11 juin, ce qui avait cassé son chemin de configuration. Il mourait sans rien faire. Remis à sa place, relancé toutes les 60 s → les 7 comptes repassent au même niveau.
+
+C'est ce diagnostic qui a donné l'idée de l'outil : **un tableau de bord pour voir d'un coup d'œil quels robots tournent en fond et s'ils vont bien.**
+
+---
+
+## Itération 1 — « ZenStatus », sombre et bavarde
+
+**Ce qui a été fait :** une vraie app macOS (bundle `.app`, quelques Ko) ouvrant un tableau de bord HTML. Thème sombre. Elle listait les tâches de fond (`launchd`) et les scripts, avec leur état lu en direct.
+
+**Le défaut :** elle affichait des informations brutes incompréhensibles — identifiants techniques (`com.zenray.youtube-focus-guard.tabs`), chemins de fichiers complets, noms d'exécutables (`watch-tabs`), et même une liste de scripts utilitaires (`config.sh`, `install.sh`) qui n'étaient pas des services. Aucune explication de ce que chaque chose faisait.
+
+**Retour de Matthieu :** « tu mets trop d'info de merde en UI et tu n'expliques pas en langage naturel à quoi ça sert. » Et : le nom « ZenStatus » ne veut rien dire, c'est de la synchro Claude, appelle-la **ClaudeSync**.
+
+---
+
+## Itération 2 — Renommage et langage humain
+
+**Ce qui a changé :**
+- Renommée **ZenStatus → ClaudeSync** (nom qui dit ce que c'est).
+- Chaque service reçoit un **nom clair** (« Sauvegarde automatique », « Copie de secours », « Synchronisation des comptes », « Garde-fou YouTube ») + **une phrase d'explication** en français + sa fréquence + son état en mots (« Tourne maintenant », « Actif »).
+- Supprimé tout le bruit : chemins, identifiants techniques, liste de scripts utilitaires.
+- Compteurs simplifiés à 3 chiffres au lieu de 5 catégories techniques.
+
+**Pourquoi :** une interface doit se lire sans dictionnaire. Le sens d'abord, la technique ensuite (ou pas du tout).
+
+---
+
+## Itération 3 — Le thème : du sombre au clair, une seule couleur
+
+**Le défaut restant :** « l'UI reste moche ». Trop sombre, sans direction esthétique.
+
+**La consigne précise de Matthieu :**
+- Fond **blanc**, texte **noir**.
+- **Une seule** couleur d'accent : `#cc7c5e` (un terracotta cuivré).
+- Tout le reste en **variantes de gris** uniquement.
+- Police **Anthropic Serif pour le corps** du texte, **Anthropic Sans pour les titres**.
+
+**Ce qui a changé :** réécriture complète du style. Les pastilles d'état vertes/rouges/ambres ont disparu : l'accent sert au positif, le gris au neutre, et une alerte se signale par un léger halo de l'accent — jamais une couleur nouvelle. Discipline chromatique stricte.
+
+**Pourquoi :** une couleur unique sur fond neutre = élégance et lisibilité immédiates. La contrainte force la cohérence.
+
+---
+
+## Itération 4 — Faire revenir la technique, mais discrète
+
+**La nuance :** Matthieu voulait quand même pouvoir voir les chemins et noms de fichiers — mais « le plus compréhensible possible immédiatement », pas en bruit.
+
+**Ce qui a changé :** sous chaque explication en clair, une **ligne technique secondaire** (petite, grise, en police à chasse fixe) affiche le nom du fichier en évidence + son chemin. Présente pour qui veut creuser, invisible pour qui ne veut que comprendre.
+
+**Pourquoi :** l'information technique n'est pas l'ennemie ; sa **hiérarchie** l'est. Reléguée au second plan, elle informe sans encombrer.
+
+---
+
+## Itération 5 — Le ton (README) et « comprendre comment ça marche »
+
+**Deux retours en même temps :**
+
+1. **Ton :** pas de tutoiement, pas de dialogue Claude↔Matthieu. Un ton de **README GitHub généraliste mais décomplexifié** — impersonnel, descriptif, simple. Exemple : l'intro est passée de « Les petits robots qui tournent tout seuls sur ton Mac… » à « Ensemble de services qui s'exécutent en arrière-plan pour sauvegarder les conversations Claude… ».
+2. **Compréhension :** « donne-moi une feature de code pour comprendre comment ça fonctionne, sinon on ne comprend rien. »
+
+**Ce qui a changé :**
+- Toutes les formulations réécrites en style neutre et impersonnel. Libellés d'état → « En cours / Actif / En erreur / Désactivé ». Compteurs → « actifs / en erreur / archivés ».
+- Ajout d'un **dérouleur « Voir le code source »** par service : un clic affiche le **vrai code du script** lu sur le disque (avec le nombre de lignes). Pour comprendre un robot, on lit ce qu'il fait, ligne par ligne.
+
+---
+
+## Itération 6 — D'une page web à une vraie app (sans Electron)
+
+**Le retour :** « c'est juste un HTML dans un onglet. Installe-le comme une vraie app, utilise Electron ou un truc léger similaire. » Puis, précision décisive : « ce qui m'intéresserait le plus c'est une app ou un **tray icon** qui renvoie vers le site + login, sinon je vais l'oublier. »
+
+**La décision technique :** Electron écarté (il embarque un navigateur entier + Node.js = 150+ Mo par app). À la place, un assemblage léger :
+- **Icône permanente dans la barre de menu** = un **binaire Swift natif** compilé (~61 Ko, via `NSStatusItem`, mode « accessoire » sans icône dans le Dock). Menu : *Ouvrir le tableau de bord* / *Connexion aux comptes Claude* / *Quitter*.
+- **Données en direct** = un **mini serveur Python** (bibliothèque standard, zéro dépendance) sur `localhost:47821` qui régénère le tableau de bord à chaque requête.
+- **Fenêtre d'app** = Chrome lancé en mode `--app` (sans onglets ni barre d'adresse), profil isolé.
+
+**Résultat :** bundle total de **100 Ko**, lancé au login, icône toujours présente → impossible à oublier. Le contraire d'Electron.
+
+**Pourquoi :** « léger » n'était pas négociable. Réutiliser le navigateur déjà installé + un binaire natif minuscule donne le confort d'une app native pour le poids d'une image.
+
+---
+
+## Itération 7 — « Sur quoi ça agit » et des graisses légères
+
+**Deux derniers retours :**
+
+1. « Il manque de savoir **sur quoi ça agit** : Claude agit sur Claude ou sur un dossier `.claude` ? l'autre agit sur youtube.com ? On ne comprend pas encore assez. »
+2. « Jamais plus de **Medium** pour le Sans, et **Regular** pour le Serif. »
+
+**Ce qui a changé :**
+- Sous chaque nom de service, une ligne **« agit sur … »** (en accent) dit précisément la cible/portée :
+  - Sauvegarde automatique → *Dossiers ~/.claude + Memory → dépôts GitHub*
+  - Copie de secours → *Conversations ~/.claude → dossier de sauvegarde*
+  - Synchronisation des comptes → *Les comptes Claude entre eux*
+  - Garde-fou YouTube → *Onglets youtube.com du navigateur*
+- **Graisses plafonnées** : Anthropic Sans jamais au-dessus de Medium (500), Anthropic Serif toujours en Regular (400). La hiérarchie se fait par la taille, la couleur et le choix de police — pas par du gras lourd.
+
+**Pourquoi :** un outil qu'on ne comprend pas tant qu'on ne sait pas **ce qu'il touche**. Et des graisses légères = une page qui respire, sans agressivité visuelle.
+
+---
+
+## Nettoyage et validation
+
+- L'ancienne app « ZenStatus », son élément de démarrage, son dossier source et son fichier temporaire ont tous été **supprimés proprement** : aucun résidu des tentatives intermédiaires.
+- Tous les feedbacks design ont été consignés dans `Design/DESIGN-FEEDBACK.md` (et indexés en mémoire) pour s'appliquer par défaut aux UI futures.
+
+**Verdict de Matthieu :** « L'app finale est parfaite car très simple et décomplexifiée. »
+
+---
+
+## La leçon
+
+Sept itérations, et la courbe de qualité est inverse de la courbe d'information. La première version disait **tout** (et n'était pas comprise). La dernière dit **l'essentiel, en clair, avec une seule couleur et des polices légères** — et elle est jugée parfaite.
+
+Méthode validée : **retirer jusqu'à la limpidité, hiérarchiser ce qui reste (sens en premier, technique au second plan, accessible à la demande), une seule couleur d'accent, des graisses légères, et toujours dire sur quoi chaque chose agit.** Puis s'arrêter.
+
+---
+---
+
+# Partie II — Le système UI complet de ZenRayProgress
+
+> Cette partie documente, de façon exhaustive et précise, **tout le langage visuel** construit sur le site `zenray-progress.vercel.app` : le mélange Apple (macOS) + Notion + « liquid glass ». Objectif : qu'on puisse re-fabriquer n'importe quel écran sans deviner. Trois principes la gouvernent, hérités de la Partie I : **fond clair, une seule couleur d'accent, graisses légères, dire sur quoi chaque chose agit.**
+
+## 1. Fondations : couleurs, tokens, thème
+
+Tout passe par des **variables CSS** (jamais de couleur en dur dans les composants) définies sur `:root`, déclinées clair/sombre. Le thème JS (`src/theme.js`) expose `PALETTE`, `THEMES`, `SHADOWS`, `RADII`, `TRANSITIONS`, `glassPanel(t)`.
+
+**Surfaces (clair) :**
+- `--zr-bg-window: #EDEDEB` — le « bureau » derrière les fenêtres.
+- `--zr-bg-content: #FDFDFC` — fond des cartes/pages (blanc cassé, jamais blanc pur agressif).
+- `--zr-bg-sidebar: rgba(248,248,246,0.72)` — barre latérale translucide.
+- Sombre : `--zr-bg-window:#262624 · --zr-bg-content:#1F1F1E`.
+
+**Accent — UNE seule couleur, déclinée :**
+- Primaire **coral** : `#cc7c5e` / `#d97757` (boutons, liens, icônes actives, pastille « aujourd'hui »).
+- Dégradé hero **coral→rose** : `#F38A5C → #E27687`.
+- Hero bleu (landing) : `#6fb6ed → #4371ee` (réservé au reel/landing, pas au workspace).
+- CTA noir pilule : `#0b0b0c`, radius 99.
+- **Aucune autre teinte** : tout le reste est **gris** (texte primaire `#1F1F1E`, secondaire ~`rgba(60,60,67,0.6)`, bordures `rgba(0,0,0,0.08-0.32)`). Règle absolue (cf. DESIGN-FEEDBACK) : fond blanc + accent + gris, point.
+
+**Verre (le cœur du « liquid glass ») :**
+- `--zr-glass-bg: rgba(253,253,252,0.62)` · `--zr-glass-bg-strong: 0.80`.
+- `--zr-glass-filter: blur(28px) saturate(200%)` · `--zr-glass-filter-thick: blur(44px) saturate(210%)`.
+- Ombres : `--zr-shadow-panel`, `--zr-shadow-pop`, `--zr-shadow-overlay: 0 24px 80px rgba(0,0,0,0.28),0 8px 24px rgba(0,0,0,0.14)`.
+
+## 2. Le « liquid glass tinted » (.zr-liquid) — signature du site
+
+C'est LA texture. Un panneau `.zr-liquid` :
+- **Fond translucide teinté** : `rgba(253,253,252,0.58)` (clair) / `rgba(31,31,30,0.50)` (sombre). Teinté, jamais transparent pur.
+- **Backdrop-filter** : `blur(36px) saturate(195%) brightness(1.05)` — le flou + saturation donne l'effet « givre vivant » d'Apple.
+- **Liseré interne lumineux** (jamais un border franc) : `box-shadow: inset 1.5px 1.5px 1px rgba(255,255,255,0.55), inset -1.5px -1.5px 1px rgba(0,0,0,0.05), inset 0 0 44px rgba(255,255,255,0.05), 0 16px 48px -12px rgba(20,30,60,0.22)`.
+- **Bord en dégradé masqué** via `::before` : `linear-gradient(135deg, rgba(255,255,255,0.85), …rgba(0,0,0,0.10))` + `mask-composite: exclude` (padding:1px) → un filet de lumière qui court sur l'arête supérieure-gauche, exactement comme le verre Apple. Jamais un trait plein.
+- **Liseré blanc 1.5px inset** : signature constante (boutons secondaires, cartes, menus).
+
+**Garde-fous d'accessibilité (non négociables) :**
+- `@supports not (backdrop-filter)` → fond opaque fort (0.92).
+- `@media (prefers-reduced-transparency: reduce)` → `background: var(--zr-bg-content); backdrop-filter:none; ::before{display:none}`.
+- `@media (prefers-reduced-motion: reduce)` → animations coupées.
+- **Zones qui scrollent** (`.zr-scroll-noblur`) : on **coupe le blur** (recompose à chaque frame = jank mobile) et on met un fond opaque fort à la place.
+- **Overlay mobile** (sidebar plein écran) : fond **quasi opaque** + blur léger 10px — sinon le verre translucide « floute tout » le contenu au lieu d'être un panneau lisible (bug réel corrigé).
+
+## 3. Typographie — les 3 polices Anthropic
+
+Trois familles, rôles stricts (35 TTF installées) :
+- **AnthropicSerif** — le **contenu** (~80 %) : corps de l'éditeur, paragraphes, titres de page. Donne le ton « éditorial Notion haut de gamme ». `letter-spacing: -0.01em`.
+- **AnthropicSans** — le **chrome** (~15 %) : sidebar, boutons, labels, barres d'outils. Neutre, lisible.
+- **AnthropicMono** — **code & chiffres** (~5 %) : statuts, métadonnées, tailles, hashs, labels mono uppercase letter-spacing 1.
+- **Graisses plafonnées ≤ Medium (400/500)** partout — JAMAIS de gras lourd, sauf le **hero**. Règle DESIGN-FEEDBACK.
+- **Hero deux-tons** (signature pubs Anthropic) : 1re ligne AnthropicSans **bold 800**, 2e ligne (après la virgule) AnthropicSerif **italic**. Titres h1/h2/h3 éditeur : weight 600, letter-spacing -0.02em.
+
+## 4. Le Finder macOS (vue Create)
+
+Reproduction fidèle du Finder, en performant à grande échelle (100k+ nœuds) :
+- **3 vues** : icônes (tuiles), liste, galerie (cartes Notion pour les .md). Bascule `ViewSwitch`.
+- **Tuile** : vignette/icône + nom sur 2 lignes (clamp), pastille de provenance (vert = jsDelivr/CDN, jaune = proxy privé), tag couleur façon Finder, badge dossier public.
+- **Performance** : `content-visibility:auto` + `contain: layout paint style` par tuile (le navigateur saute layout/paint hors écran), hauteur de ligne fixe (`tileRowH(zoom)`) → zéro saut au scroll. **Virtualisation** au-delà de ~200 tuiles. Dossiers : TOUS les éléments affichés (pas de cap 1000), vidéos incluses.
+- **Interactions macOS** : simple clic = sélection, Cmd-clic = toggle, Shift-clic = plage, double-clic = ouvrir, **marquee** (rubber-band) sur le fond vide (rectangle bleu translucide `rgba(10,132,255,0.14)` + bord `0.7`), Alt-clic = peek (QuickLook).
+- **Mobile** : `IS_TOUCH` (pointer coarse / hover none) → **tap unique** ouvre dossier/média directement (pas de double-clic au doigt).
+- **Renommage inline** : input liquid-glass, bordure accent, Enter valide / Échap annule.
+- **Slider de zoom**, tri (Nom/Type/Tag), filtres type, barre de recherche.
+
+## 5. L'éditeur (Notion-like, BlockNote)
+
+- **PageEditorBN** : BlockNote (Mantine) en **AnthropicSerif**, fond transparent, texte `#1F1F1E` / `#ECECEA`.
+- **Titre de page** : grand AnthropicSans **800**, 38px, letter-spacing -0.02em ; le nom du fichier EST le titre (ex. « 21 Juin 2026 »).
+- **Blocs** : paragraphes, h1-3, listes, cases à cocher, code (fond gris `rgba(120,120,128,0.13)`, radius 4), tables (bordure `rgba(0,0,0,0.32)`), citations (filet accent + italic).
+- **Placeholder « Enter text or type… » en NOIR** (`#1F1F1E`), catch-all toutes les variantes BlockNote/ProseMirror (focus/non-focus, data-placeholder, is-empty).
+- **Collage intelligent** : un vrai tableau collé (HTML/Sheets/Notion/markdown GFM) devient un bloc table ; une URL ouvre `NotionPasteMenu` (lien / embed / aperçu).
+- **Images collées/déposées en PLEINE RÉSOLUTION** (WebP 0.95, plus de downscale 1600px), commitées sur GitHub et intégrées.
+- **Commentaires** sous les propriétés (ordre Notion), **pages liées** avec aperçu markdown, **lightbox** (fond `rgba(0,0,0,0.82)` + blur 6px).
+- **Persistance jumelle** : `.blocknote.json` (source lossless) + `.md` (lisible/portable).
+- **Page du jour 1 clic** : menu New → « Aujourd'hui · <date FR> », crée+ouvre sans dialogue (idempotent).
+
+## 6. Composants signature
+
+- **MacWindow** (fenêtre macOS portant la vidéo/le contenu) : barre de titre 36px + **3 pastilles** (rouge/jaune/vert), `border-radius:16`, ombre bleutée `0 40px 90px -28px rgba(40,60,140,0.45)`, **chevauchement volontaire** du hero via marge négative (`clamp(-72px,-9vw,-112px)`).
+- **Cartes** : fond `--zr-bg-content`, `border-radius:18` (paragraphe) / 22 (widget), ombre douce, largeur de lecture maxWidth 680, contenu centré 960.
+- **Menu New** unifié (coin sup. droit) : rendu via `createPortal(document.body)` (échappe à tout contexte d'empilement/transform), ancré sous le bouton, borné dans le viewport. Items : Aujourd'hui · date, Page markdown, Dossier, Table, Upload vidéo (accent), Worker auto-upload.
+- **Sidebar** : 3 zones (Create / Apps / Système), items `.zr-navitem` (icône dégradée + label Sans 400, actif = `primarySoft` + accent). Repliable, mode **flottant au survol** (façon Claude Code) ou ancré, **overlay plein écran** sous 860px.
+- **QuickLook (Espace)** : overlay `createPortal(body)`, backdrop `blur(8px)` + dim, chrome `.zr-quicklook-chrome` (verre clair), navigation ↑↓, reconstruit le fichier à la volée (images/vidéo/audio/pdf/texte), cap mémoire 500 Mo.
+- **Notifications** (`Notifications.jsx`) : cartes liquid glass, icône SF Symbols teintée, actions.
+- **Drive Dashboard** : lignes par repo (barre de remplissage /5 Go, badge public/privé, lien GitHub `arrow.up.right`), familles repliables par `<kind>-<vis>`, archives privées masquables.
+
+## 7. Iconographie, ombres, rayons, transitions
+
+- **Icônes** : SF Symbols-like (`Icon.jsx`, `SYMBOLS`), `grad` (dégradé accent) pour les items actifs, `weight` fin (1.5-1.8).
+- **Rayons** (`RADII`) : sm ~7-8, md ~11-12, panel ~16-18, pilule 99.
+- **Ombres** (`SHADOWS`) : sm/lg douces, jamais dures ; les overlays utilisent `--zr-shadow-overlay`.
+- **Transitions** : `TRANSITIONS.base/smooth` (~.14-.18s ease), hover de fond sur les items (`rgba(255,255,255,.55)` clair / `rgba(255,255,255,.05)` sombre).
+
+## 8. Règles transverses (à ne jamais enfreindre)
+
+1. **Une couleur d'accent** (coral), tout le reste gris. Jamais un 2e accent dans le workspace.
+2. **Graisses ≤ Medium** sauf hero. Pas de gras lourd dans le chrome.
+3. **Verre teinté + liseré blanc 1.5px inset**, jamais un border plein ; toujours les fallbacks reduced-transparency / no-backdrop.
+4. **Pas de blur sur une zone qui scrolle** (jank) → fond opaque.
+5. **Toute surface flottante `position:fixed` sous une carte à backdrop-filter/transform → `createPortal(document.body)`** (sinon piégée/mal positionnée).
+6. **Dire sur quoi ça agit** : chaque bouton/section porte un libellé en langage naturel (héritage Partie I).
+7. **index.html jamais en cache** (no-cache) + assets hashés cache long ; loaders résilients (lazyRetry). Sinon écran blanc après redeploy.
+8. **Mobile d'abord lisible** : panneaux overlay opaques, tap unique, zones de tap ≥ 40px.
+
+> Cette Partie II est la référence visuelle vivante du site : tout nouvel écran (dont le dashboard Features) s'y conforme.
+
+---
+---
+
+# Partie III — Journal des évolutions (append-only, une entrée par date)
+
+> À partir d'ici, toute évolution du langage visuel (nouveau composant, retour de Matthieu, divergence trouvée entre cette doctrine et le code vivant) s'AJOUTE en fin de fichier, jamais en réécrivant les Parties I/II ci-dessus. Convention calquée sur `SocialMedia1.md` (skill `social-media`) : une section datée par évolution, un index maintenu à jour.
+
+## 2026-07-14 — Spotlight (Cmd+K) + divergence accent corail/bleu trouvée
+
+**Ce qui a été construit :** `src/components/SpotlightSearch.jsx` — recherche façon macOS Spotlight, accessible de partout (Cmd/Ctrl+K), réutilisant l'index de recherche existant (`searchIndexClient.js`) et le style `.zr-liquid` (glass panel, blur, liseré). Décision de raccourci : Cmd+Space (proposé initialement, inspiré du vrai Spotlight) écarté après vérification technique — c'est un raccourci SYSTÈME macOS, intercepté par l'OS avant le navigateur, impossible à capter par une page web. Cmd+K choisi (convention Linear/Notion/Vercel/Slack), validé avec Matthieu avant de coder.
+
+**Divergence RÉELLE trouvée entre cette doctrine et le code vivant :** la Partie I/II ci-dessus documente un accent **corail** `#cc7c5e`. Le fichier `src/theme.js` dit littéralement en commentaire *"Apple system blue (macOS Tahoe). Fini l'orange."* et l'accent réellement utilisé partout dans le site aujourd'hui est le **bleu système Apple** `#0A84FF` — confirmé aussi visuellement (captures d'écran du site en dev local : bordures de sélection, badges, icônes actives, tout est bleu, aucun corail visible). Cette Partie III ne tranche PAS laquelle est "la bonne" — c'est à Matthieu de le faire — mais consigne le fait : **au 2026-07-14, le code vivant a dérivé vers le bleu, la doctrine écrite dit encore corail.** Tout nouveau composant doit lire `theme.js` (source de vérité exécutable) plutôt que la Partie II de ce fichier pour la couleur d'accent, jusqu'à ce que Matthieu tranche et que cette entrée soit mise à jour (par un NOUVEL append, jamais en réécrivant celle-ci).
+
+**Périmètre assumé du composant :** sélectionner un résultat de recherche navigue vers son DOSSIER contenant (réutilise `setFolder`/`setView`, même mécanisme que le fil d'Ariane), pas vers l'élément ouvert directement dans son viewer — ouvrir directement aurait demandé de reconstruire la forme exacte d'une "entry" (hasKids, contentPath, kind…) hors du contexte qui la fabrique normalement dans App.jsx, risqué de mal faire pour un type de fichier non testé. Amélioration possible plus tard si demandée.
+
+## INDEX du fichier (2026-07-14)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync : sombre→clair, langage humain, une couleur d'accent, graisses légères |
+| Partie II (§1-8) | Système UI complet ZenRayProgress : tokens, liquid glass, typographie, composants, règles transverses |
+| Partie III — 2026-07-14 | Spotlight Cmd+K construit ; divergence accent corail (doctrine) vs bleu (code vivant) trouvée et consignée, non tranchée |
+| Partie III — 2026-07-15 | Music intégrée dans Create ; Liquid Glass Normal ; lecteur multi-source et limites provider explicites |
+
+## 2026-07-15 — Music doit rester une vue Create et non une application opaque imbriquée
+
+**Retour observé :** une interface Music peut reprendre la structure d’Apple Music sans devenir une seconde fenêtre plein écran qui remplace le Finder. Dans Create, la barre de navigation, le bouton retour, le fil d’Ariane et la sidebar globale restent visibles et fonctionnels. Le contenu Music occupe seulement la zone de contenu du dossier.
+
+**Règle Liquid Glass Normal :** la coque et le lecteur utilisent le preset vivant `liquidGlassNormal(t)` — fond translucide autour de 0,52, blur 36px, saturation 195 %, liseré lumineux et ombre diffuse. Aucun aplat gris/noir opaque codé en dur. Le texte vient toujours du thème (`t.textPrimary` / `t.textSecondary`) : noir cassé sur verre clair, blanc cassé sur verre sombre. La zone qui scrolle reste sans backdrop blur afin d’éviter le jank ; le verre appartient à la coque et aux surfaces flottantes.
+
+**Règle lecteur multi-source :** une timebar visuellement active doit réellement piloter la source. ZenRayShards utilise le Range du Service Worker, YouTube `seekTo`, Spotify le Web Playback SDK. Si Spotify n’est disponible qu’en Embed, ne jamais simuler un slider contrôlable : laisser les contrôles du provider et expliquer sobrement la limite. Les micro-interactions restent à 0,15 s et l’entrée de la grande vue à 0,30 s avec EaseOutExpo.
+
+**Règle d’ajout :** le bouton Ajouter et le drag-and-drop doivent annoncer leur destination et accepter les sources réellement supportées : fichiers audio vers ZenRayShards, URL YouTube, URL Spotify album/playlist/titre. Le navigateur route les `File` via la capture universelle ; les chemins locaux Mac utilisent un runner `.mjs` qui délègue au pipeline audio Git canonique, jamais une deuxième implémentation du chiffrement/upload.
+
+## 2026-07-14 (bis) — Fil d'Ariane en capsule + Spotlight : capsule ≠ carré arrondi
+
+**Retour de Matthieu :** le Spotlight construit plus tôt dans la journée utilisait `RADII.lg` (16px) sur tout
+le panneau — lu comme un « carré arrondi », pas une « capsule ». Correction technique précise : une capsule
+(pilule/stadium) a un rayon ≥ moitié de la hauteur ; un panneau multi-lignes ne peut PAS être une capsule sans
+couper les bords en arc absurde. Le vrai Spotlight macOS montre en réalité DEUX formes distinctes : une barre
+de recherche en capsule pure, et (si besoin) un panneau de résultats séparé à coins généreusement arrondis —
+jamais fusionnées en un seul bloc.
+
+**Ce qui a changé :**
+- `SpotlightSearch.jsx` : la barre de recherche est maintenant un `<div>` à part, hauteur fixe 52px, radius
+  999 (capsule vraie, radius > hauteur/2). Le panneau de résultats est un second `<div>` séparé par un gap de
+  10px, radius 24 (généreux mais pas une pilule). Vérifié par style calculé réel (`getComputedStyle`), pas à
+  l'œil : `borderRadius: 999px` / `height: 52px` sur la barre, `borderRadius: 24px` sur le panneau.
+- **Fil d'Ariane (App.jsx, `Crumbs`)** reworké dans la foulée pour rester cohérent avec ce même langage
+  « capsule » : chaque segment passe de `RADII.sm` (8px) à un radius 999 (pilule individuelle), le conteneur
+  entier gagne une bordure + fond `t.cardBg` en pilule (au lieu de flotter sans chrome), et le segment COURANT
+  (dossier actif) obtient enfin un fond distinctif `PALETTE.primarySoft` + texte accent — jusque-là tous les
+  segments se distinguaient seulement par la graisse du texte, aucun répère visuel de "où je suis" façon
+  Finder. Vérifié par style calculé : segment courant = `background: rgba(10,132,255,0.12)`,
+  `color: rgb(10,132,255)`, tous les segments et le conteneur = `borderRadius: 999px`.
+
+**Leçon générale pour ce fichier :** « capsule » et « carré arrondi » ne sont PAS un simple choix de valeur de
+radius parmi d'autres (8/12/16/20) — au-delà d'un certain rapport rayon/hauteur, la FORME change de nature
+perçue. Pour tout élément à hauteur fixe et courte (barre, chip, bouton, segment de fil d'Ariane), préférer
+un radius de 999 (pilule) plutôt qu'une valeur de la table `RADII` — réserver `RADII.md/lg/xl` (10-20px) aux
+panneaux/cartes à plusieurs lignes de contenu.
+
+## INDEX du fichier (2026-07-14 bis)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync : sombre→clair, langage humain, une couleur d'accent, graisses légères |
+| Partie II (§1-8) | Système UI complet ZenRayProgress : tokens, liquid glass, typographie, composants, règles transverses |
+| Partie III — 2026-07-14 | Spotlight Cmd+K construit ; divergence accent corail (doctrine) vs bleu (code vivant) trouvée et consignée, non tranchée |
+| Partie III — 2026-07-14 (bis) | Capsule ≠ carré arrondi : Spotlight (barre capsule + panneau séparé) et fil d'Ariane (segments pilule + segment courant distinctif) reworkés et vérifiés par style calculé réel |
+
+## 2026-07-14 (ter) — Bug production réel (index inclut la corbeille) + menu déroulant complet du fil d'Ariane
+
+**Bug de production trouvé par Matthieu (capture d'écran réelle du site) :** après une recherche Spotlight et
+sélection d'un résultat, la vue Create n'affichait plus rien — même après rechargement. Ce N'ÉTAIT PAS l'artefact
+de cache de test suspecté la fois précédente : **cause racine réelle et confirmée** — l'index de recherche
+global inclut des chemins `trash/…` (éléments supprimés, jamais purgés de l'index), et le Spotlight ne filtrait
+aucun préfixe. Un résultat de la corbeille cliqué navigue `folder` vers un chemin hors de l'arbre "pages" que
+la vue Create sait rendre → grille vide, état persistant via localStorage (`zr:create:folder`), survit à un
+reload. Preuve : lecture directe du delta chiffré de l'index (`trash/Photos/DJI/29 Juin 2026/Photos/BestOf-mcwg.img.json`
+et 4 autres exemples trouvés).
+
+**Corrigé à deux niveaux (défense en profondeur) :**
+1. `SpotlightSearch.jsx` : filtre `p.startsWith('pages/')` avant scoring — la corbeille (et toute future racine
+   hors "pages") ne peut plus apparaître dans les résultats.
+2. `App.jsx` (`validFolder`) : `folder` est validé à la lecture ET à l'écriture — une valeur invalide déjà
+   persistée (état cassé EXISTANT, comme celui de Matthieu) s'auto-répare au prochain chargement, sans
+   manipulation manuelle de son navigateur.
+
+**Rework fil d'Ariane (demande Matthieu, "comme sur iOS/macOS") :** ajout d'un chevron toujours présent en fin
+de fil d'Ariane, ouvrant un menu déroulant listant TOUS les niveaux (pas seulement les segments masqués par le
+repli "…" existant) — clic sur n'importe quel niveau = saut direct. Réutilise EXACTEMENT `DropMenu`/`DropItem`
+(mêmes composants que le repli "…" et les boutons Trier/Filtrer), donc même garantie de fonctionnement.
+
+**Limite de vérification honnête :** le clic RÉEL (via l'outil de test, coordonnées exactes vérifiées par
+`getBoundingClientRect`) n'a pas réussi à ouvrir CE menu déroulant — MAIS le menu "…" préexistant (code jamais
+modifié, déjà en production) échoue EXACTEMENT PAREIL dans ce même environnement de test. Isolation concluante :
+limite de l'outil d'automatisation sur ce composant précis, pas une régression introduite. Rendu, câblage et
+réutilisation du composant vérifiés corrects ; seule l'interaction clic-pour-ouvrir n'a pas pu être prouvée par
+ce canal — à confirmer par Matthieu en usage réel.
+
+## INDEX du fichier (2026-07-14 ter)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync |
+| Partie II (§1-8) | Système UI complet ZenRayProgress |
+| Partie III — 2026-07-14 | Spotlight construit ; divergence accent corail/bleu non tranchée |
+| Partie III — 2026-07-14 bis | Capsule ≠ carré arrondi (Spotlight + fil d'Ariane), vérifié par style calculé |
+| Partie III — 2026-07-14 ter | Bug prod corrigé (trash dans l'index + auto-réparation folder) ; menu déroulant complet du fil d'Ariane ajouté (limite de test honnêtement notée) |
+
+## 2026-07-14 (quater) — Menu Finder en colonnes, navigation par lettre et système de courbes
+
+**Retour de Matthieu :** le fil d'Ariane devait enfin ouvrir un vrai navigateur de dossiers en colonnes,
+fondé sur les références Finder fournies, sans le crop fondamental des tentatives précédentes. Toute lettre
+tapée dans une vue Create doit sélectionner le premier dossier ou média commençant par cette lettre et le
+faire défiler avec une animation premium de 0,30 s.
+
+**Décisions UX/UI exécutables :**
+- courbe de décélération commune : EaseOutExpo, `cubic-bezier(0.16, 1, 0.3, 1)` en CSS et
+  `x === 1 ? 1 : 1 - 2 ** (-10 * x)` en JavaScript ;
+- `0,15 s` pour micro-interactions fréquentes (boutons, hover, toggles), car `0,10 s` paraît saccadé/arcade ;
+- `0,20–0,25 s` pour les transitions standard ;
+- `0,30–0,35 s` pour panneaux, modales et grands déplacements ; navigation par lettre retenue à `0,30 s` ;
+- plus l'action est courte et fréquente, plus elle est rapide ; plus l'élément est grand ou important, plus
+  sa transition peut être longue. `prefers-reduced-motion` conserve toujours une voie instantanée.
+
+**Implémentation :** le panneau Finder est rendu par `createPortal(document.body)` en position fixe, donc
+aucun `overflow:hidden`, backdrop-filter ou transform du fil d'Ariane ne peut le rogner. Il affiche des
+colonnes sombres séparées, dossiers bleus, chevrons et sélection système bleue, ouvre la branche au survol,
+et utilise l'union de l'arbre courant et de l'index CDN exhaustif afin de ne pas perdre les dossiers quand
+l'API Git tree est tronquée. Le scroll par lettre calcule aussi la rangée d'une grille virtualisée lorsque
+la tuile cible n'est pas encore montée, puis exécute EaseOutExpo sur exactement 300 ms.
+
+**Skill renommé :** `design-liquidglass` devient `design-ux-ui-curves-liquidglass` pour que le déclenchement
+couvre explicitement l'UX, l'UI, les courbes de mouvement et le langage liquid glass — l'ancien nom est
+deprecated et doit disparaître des copies Codex, Claude et Memory.
+
+## INDEX du fichier (2026-07-14 quater)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync |
+| Partie II (§1-8) | Système UI complet ZenRayProgress |
+| Partie III — 2026-07-14 | Spotlight construit ; divergence accent corail/bleu non tranchée |
+| Partie III — 2026-07-14 bis | Capsule ≠ carré arrondi (Spotlight + fil d'Ariane) |
+| Partie III — 2026-07-14 ter | Bug trash/index corrigé ; première passe menu complet du fil d'Ariane |
+| Partie III — 2026-07-14 quater | Menu Finder anti-crop en colonnes ; navigation par lettre EaseOutExpo 300 ms ; système de durées ; skill renommé |
+
+## 2026-07-14 (quinquies) — Références Finder normatives : quatre modes et navigateur en colonnes
+
+**Correction de méthode par Matthieu :** `Design1.md` est une mémoire de design vivante. Il doit être lu ET
+réécrit intelligemment après chaque nouvelle proposition ; les références récentes ne sont pas contraintes par
+une doctrine ancienne. L'append-only conserve l'historique, mais la dernière décision explicite devient la norme
+courante. Cette entrée remplace donc la mention ancienne « 3 vues » de la Partie II §4 par **4 modes Finder**.
+
+**Référence 1 — menu de mode d'affichage (norme retenue) :** popover sombre liquid glass compact, quatre lignes
+`Icônes`, `Liste`, `Colonnes`, `Galerie`; le mode actif porte une coche à gauche. Grande typographie lisible,
+alignement strict des libellés, aucun pictogramme décoratif supplémentaire, rayon généreux, bord clair subtil,
+ombre courte et fond translucide sombre. Le menu est une surface flottante bornée au viewport et rendue hors de
+tout ancêtre susceptible de la rogner. `Colonnes` est désormais un mode Finder de premier rang, pas un faux menu
+plat ni un simple alias de la galerie.
+
+**Référence 2 — navigateur hiérarchique en colonnes (norme retenue et implémentée pour le fil d'Ariane) :**
+une colonne par niveau, séparateurs verticaux noirs fins, icône dossier bleue à gauche, libellé au centre et
+chevron à droite seulement si le dossier possède des descendants. La branche active est bleue système avec texte
+blanc ; un survol non actif est gris neutre. Survoler ouvre la colonne suivante, cliquer navigue. Chaque colonne
+peut scroller verticalement et la cascade complète peut scroller horizontalement si le viewport est étroit.
+
+**Validation anti-crop réelle :** la première passe de test a détecté que, sur un chemin long, le chevron du fil
+d'Ariane passait sous le champ Recherche. Le chemin textuel et son déclencheur ont été séparés en deux zones flex :
+seul le texte peut désormais se contracter. Le panneau est un portal fixe dont la coordonnée gauche est clampée
+à 12 px. Test à 1600×900 : déclencheur visible et cliquable ; panneau de 4 colonnes entièrement visible
+(`left=12`, `right=964`, `width=952`), survivant aux re-renders ; navigation et fermeture après clic validées.
+
+## INDEX du fichier (2026-07-14 quinquies)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync |
+| Partie II (§1-8) | Système UI historique ZenRayProgress ; §4 « 3 vues » remplacé par quinquies |
+| Partie III — 2026-07-14 | Spotlight construit ; divergence accent corail/bleu non tranchée |
+| Partie III — 2026-07-14 bis | Capsule ≠ carré arrondi (Spotlight + fil d'Ariane) |
+| Partie III — 2026-07-14 ter | Bug trash/index corrigé ; première passe menu complet du fil d'Ariane |
+| Partie III — 2026-07-14 quater | Menu Finder anti-crop ; navigation par lettre EaseOutExpo ; skill renommé |
+| Partie III — 2026-07-14 quinquies | Design1 vivant ; 4 modes Finder ; anatomie exacte des 2 captures ; anti-crop validé |
+
+## 2026-07-14 (sexies) — Liquid Glass Normal réel et coque anti-crop
+
+**Retour de Matthieu :** la première version du navigateur en colonnes restait visuellement grise et son fill
+était coupé par la zone scrollable. Les trois références officielles sont désormais obligatoires : Normal,
+UltraClear et Tinted dans `Design/LiquidGlass-Themes/`. Pour ce menu, le preset retenu est **Normal** : surface
+translucide, blur/saturation vivants, liseré lumineux, ombre diffuse et aucun fond gris opaque.
+
+**Cause vérifiée dans le code :** `.zr-scroll-noblur` appliquait `background: var(--zr-glass-bg-strong) !important`
+à chaque colonne, écrasant le verre de la coque ; le scrollbar horizontal vivait aussi sur la coque arrondie.
+Correction implémentée : `liquidGlassNormal(t)` dans `src/theme.js`, coque `.zr-liquid-normal` séparée du
+scroller `.zr-path-columns-scroll`, scrollbar horizontal masqué, colonnes transparentes avec séparateurs fins.
+Le skill impose maintenant cette séparation pour éviter toute récidive.
+
+## INDEX du fichier (2026-07-14 sexies)
+
+| Section | Contenu |
+|---|---|
+| Partie I (Itérations 1-7) | Genèse ClaudeSync |
+| Partie II (§1-8) | Système UI ; §4 4 modes Finder |
+| Partie III — 2026-07-14 quater | Menu Finder anti-crop ; navigation par lettre ; courbes |
+| Partie III — 2026-07-14 quinquies | Références Finder ; Design1 vivant ; anti-crop validé |
+| Partie III — 2026-07-14 sexies | Références Liquid Glass ; preset Normal ; coque/scroller anti-crop |
+
+## 2026-07-14 (septies) — Finder : clic exclusif, ancrage statique et ellipsis de fin
+
+**Retour de Matthieu (norme retenue) :** le navigateur de dossiers doit suivre le Finder macOS. Le hover ne
+doit jamais ouvrir, fermer ou basculer une colonne : il rend éventuellement un état visuel, rien de plus. Un
+**clic** sur un dossier ouvre sa colonne enfant ; un clic sur une feuille valide la destination et ferme le
+panneau. Cette règle remplace explicitement l'ancien comportement `onMouseEnter -> setChain`.
+
+La coque du menu reste ancrée à la capsule du fil d'Ariane et à la première colonne. Les colonnes suivantes
+s'étendent vers la droite ; si l'écran est trop étroit, seul le scroller interne défile. La coque ne se recentre
+pas à chaque clic, afin que la cible ne se déplace jamais sous le pointeur.
+
+Le fil d'Ariane garde toujours la racine et la fin utile du chemin ; le menu des segments masqués (`…`) est placé
+à droite de cette fin, juste avant le navigateur en colonnes. Il ne doit jamais surgir au milieu du chemin ni
+recouvrir/cropper le contenu visible.
+
+## INDEX du fichier (2026-07-14 septies)
+
+| Section | Contenu |
+|---|---|
+| Partie III — 2026-07-14 sexies | Liquid Glass Normal ; coque et scroller séparés |
+| Partie III — 2026-07-14 septies | Clic-only Finder ; ancrage statique ; ellipsis à droite ; hover-navigation interdite |
+
+## 2026-07-14 (octies) — Ellipsis passive et vraie pilule du fil d'Ariane
+
+**Correction UX retenue :** `…` n'est pas un bouton. Il ne reçoit aucun clic et ne contient aucune flèche. Il
+sert uniquement d'indicateur visuel des segments masqués ; l'ouverture du navigateur complet se fait exclusivement
+par la flèche indépendante « As Columns » placée à sa droite. Toute capsule interactive du chemin doit être une
+vraie pilule (`border-radius:999px`), pas un rectangle à rayon moyen.
+
+## INDEX du fichier (2026-07-14 octies)
+
+| Section | Contenu |
+|---|---|
+| Partie III — 2026-07-14 septies | Clic-only Finder ; ancrage statique ; ellipsis à droite |
+| Partie III — 2026-07-14 octies | Ellipsis passive ; flèche As Columns indépendante ; pilule 999px |
+
+## 2026-07-14 (nonies) — Music appartient à Create ; ancienne app Audio dépréciée
+
+**Décision produit de Matthieu :** l'ancienne application Audio noire, son écran séparé et son entrée dans la
+sidebar sont dépréciés et doivent être supprimés. Ne jamais les reconstruire. La musique est désormais une
+capacité native de **Create** : les fichiers audio, albums, playlists locales, références YouTube audio et
+albums Spotify habitent les dossiers Create et s'ouvrent dans un panneau Apple Music-like Liquid Glass Normal.
+
+Normes visuelles et fonctionnelles : pochette toujours carrée 1:1 à coins généreusement arrondis, aucune carte
+16:9 héritée de la vidéo ; listes de titres compactes, sélection multiple Finder et lecture séquentielle dans le
+lecteur global persistant. Une playlist est un vrai fichier `.media.json` déplaçable/renommable dans Create, pas
+un état caché de l'ancienne app. Les octets audio sont streamés et déchiffrés à la demande ; la pochette apparaît
+immédiatement et la lecture continue pendant la navigation entre dossiers.
+
+## INDEX du fichier (2026-07-14 nonies)
+
+| Section | Contenu |
+|---|---|
+| Partie III — 2026-07-14 octies | Ellipsis passive ; flèche As Columns indépendante ; pilule 999px |
+| Partie III — 2026-07-14 nonies | Music dans Create ; Audio déprécié ; pochettes 1:1 ; playlists-fichiers ; lecteur global |
+
+## 2026-07-15 — Music : une bibliothèque complète dans Create, jamais une modale vide
+
+**Échec à ne pas reproduire :** afficher un grand panneau blanc séparé avec seulement deux champs « Playlist »
+et « Spotify » ne constitue pas une application musicale. Cela masque la bibliothèque, la pochette, le morceau
+en cours et le transport ; l'utilisateur perd aussi le contexte de Create.
+
+**Contrat retenu d'après les références Apple Music :** Music remplace temporairement le contenu de la zone
+centrale de Create, sans créer une application ou une route parallèle. La coque est un Liquid Glass Normal sombre
+et transparent. Elle comprend une navigation latérale stable (Accueil, Ajouts récents, Artistes, Albums, Titres,
+Playlists), une recherche immédiatement visible, des pochettes carrées, une vue albums, une liste de titres et un
+lecteur en pilule toujours visible en bas avec précédent, lecture/pause, suivant, progression, répétition, shuffle
+et volume. L'import audio reste accessible dans cette même vue. Un double-clic sur n'importe quel manifeste audio
+de Create ouvre Music et lance ce titre. Les transitions de vue utilisent 0,30 s avec EaseOutExpo ; les micro-états
+utilisent 0,15 s.
+
+La bibliothèque n'est pas limitée au dossier courant : elle découvre les manifestes sous `pages/Music`, ce qui
+évite l'écran vide et garantit qu'un album tel que `Lost Odyssey OST` reste visible depuis n'importe quel dossier.
+Le lecteur compact global est masqué pendant l'ouverture de Music pour ne jamais afficher deux transports concurrents.
+
+## INDEX du fichier (2026-07-15)
+
+| Section | Contenu |
+|---|---|
+| Partie III — 2026-07-14 nonies | Music dans Create ; ancienne app Audio supprimée |
+| Partie III — 2026-07-15 | Bibliothèque Apple Music-like intégrée ; navigation, recherche, import et lecteur complet |
+## 2026-07-15 — Music : trois vues réarrangeables et player transversal déterministe
+
+**Statut des nouvelles captures : norme retenue et implémentée.** La capture Spotify desktop fixe la structure : bibliothèque à gauche, contenu au centre, contexte « À l’écoute » à droite, puis un seul player qui traverse les trois zones en bas. Les deux captures de player confirment une vraie pilule `999px`, la progression au centre, les commandes primaires groupées et les utilitaires/volume à droite. Cette règle complète l’entrée « Music doit rester dans Create » : les trois vues vivent dans le stage Create et ne remplacent jamais son chrome.
+
+**Réarrangement :** les panneaux latéraux sont redimensionnables, repliables et inversibles sans démonter ni réinitialiser le player. Le contenu central reste flexible. La grande transition de colonnes utilise 0,30 s EaseOutExpo ; les boutons restent à 0,15 s. Les scrolls internes ne portent aucun backdrop blur.
+
+**Interaction player :** simple clic = sélection, double clic = une seule commande de lecture, clic droit = menu contextuel rendu par portal. La timebar affiche une position provisoire pendant le drag et ne commet le seek qu’une fois au relâchement ; ne jamais câbler simultanément `onInput` et `onChange` vers le provider. Toute relance explicite de la même piste doit posséder une identité de commande indépendante de l’index courant.
+
+**Liquid Glass Normal :** coque et player gardent le preset Normal vivant (`~0,52`, blur 36 px, saturation 195 %, liseré et ombre), enrichi par un gradient très discret dérivé de la pochette. Un grand aplat blanc/gris opaque est une régression. Les textes utilisent exclusivement le thème actif afin de rester noir cassé sur verre clair ou blanc cassé sur verre sombre.
+
+| Partie III — 2026-07-15 Music trois vues | Références Spotify/Apple normatives ; panneaux redimensionnables/inversibles ; player transversal ; seek déterministe ; menu contextuel |
+
+## 2026-07-16 — Music jugé "moche" : le fond décoratif bleu/rose retiré, violait sa propre règle §8.1
+
+**Retour de Matthieu (verbatim) :** captures réelles de l'app macOS Music et de Spotify desktop, avec l'instruction explicite « ne copie pas le noir de l'UI de Spotify juste les éléments d'UX UI boutons/icônes/disposition au pixel près » — demande de repartir sur un rendu hyper simple, minimaliste, sans le thème sombre. **Statut : norme retenue et implémentée**, elle COMPLÈTE (ne remplace pas) l'entrée du 2026-07-15 sur la structure trois-vues (toujours valide : bibliothèque/contenu/À l'écoute + player transversal).
+
+**Divergence trouvée en vérifiant le code vivant (pas supposée) :** l'entrée du 2026-07-15 sanctionnait un fond « enrichi par un gradient très discret dérivé de la pochette » — mais `CreateMusicPanel.jsx` portait EN PLUS un second calque fixe, `linear-gradient(140deg, bleu, rose, bleu)`, jamais dérivé d'aucune pochette, à opacité non négligeable (`.16/.10/.09`). Deux couleurs supplémentaires (bleu ET rose) en plus de l'accent système bleu déjà en place : violation directe de la règle transverse §8.1 (« une seule couleur d'accent, tout le reste gris »), pas juste un désaccord esthétique. Ce calque + un fondu de pochette trop appuyé (`blur(72px)`, opacité `.18-.27`) étaient la source du bruit visuel dénoncé.
+
+**Correctif appliqué :** calque bleu/rose supprimé entièrement. Fondu de pochette conservé (la doctrine l'exige toujours) mais rendu réellement discret : flou porté à `110px`, opacité divisée par ~2 (`.08/.14`), zone couverte réduite (`inset:-15%` au lieu de `-28%`). Résultat vérifié en navigateur réel : fond quasi neutre, très proche du blanc cassé d'Apple Music, plus aucune tache de couleur non liée au contenu affiché.
+
+**Portée volontairement NON traitée cette passe** (signalé à Matthieu, pas caché) : le hover-to-play façon Spotify sur les lignes de titres (remplacer le numéro par une icône lecture au survol), et tout autre polish de densité ligne à ligne — non demandés explicitement, scope minimal tenu pour cette correction.
+
+| Partie III — 2026-07-16 Music bruit visuel | Fond bleu/rose fixe retiré (violait §8.1, 2 accents en trop) ; fondu de pochette rendu réellement discret ; structure 3-vues du 2026-07-15 inchangée |
+
+## 2026-07-16 — Référence Spotify desktop décortiquée en 246 unités UI
+
+**Statut : référence analysée, non encore retenue comme norme visuelle.** La capture native 3456 × 2234
+confirme la structure produit déjà retenue le 2026-07-15 : bibliothèque persistante à gauche, contenu primaire
+flexible au centre, contexte du morceau à droite, puis un player transversal unique en bas. Le comptage atomique
+inclut chaque conteneur, contrôle, icône, texte, badge, miniature et ligne visible ; une pochette composite compte
+comme une image, pas comme la somme de ses traits graphiques internes.
+
+**Mesures et langage visuel observés :** colonnes d'environ 24 % / 51 % / 24 %, gouttières noires de 14–16 px,
+panneaux `#121212` sur coque `#000000`, sélection `#2A2A2A`, textes primaires blancs, secondaires `#B3B3B3`,
+accent unique Spotify vert proche de `#1ED760`, rayons de panneaux autour de 12–16 px et capsules à 999 px.
+La pochette pilote localement le gradient rouge du contenu central, sans contaminer le chrome global.
+
+**Leçon UX :** la hiérarchie ne vient pas d'effets décoratifs mais de la permanence des zones, de la densité
+progressive et du contraste. La gauche sert à choisir, le centre à agir, la droite à comprendre le contexte,
+le bas à contrôler la lecture sans perdre l'état. Limites visibles à ne pas copier : titre droit tronqué,
+forte densité verticale et chrome sombre opaque incompatible avec la norme Liquid Glass claire actuelle.
+
+## INDEX du fichier (2026-07-16 Spotify)
+
+| Section | Contenu |
+|---|---|
+| Partie III — 2026-07-15 Music trois vues | Structure bibliothèque / contenu / contexte + player transversal |
+| Partie III — 2026-07-16 Music bruit visuel | Fond décoratif retiré ; simplicité claire retenue |
+| Partie III — 2026-07-16 Spotify 246 unités | Capture analysée ; mesures, couleurs, hiérarchie et limites ; référence non normative |
+
+## 2026-07-16 — Correction du comptage Spotify
+
+Correction de l'entrée du 2026-07-16 « Référence Spotify desktop décortiquée en 246 unités UI » :
+l'inventaire final, après décomposition du player et du Dock en contrôles atomiques, contient **268 unités**.
+Le protocole, les mesures et les conclusions UX restent inchangés.
+
+## 2026-07-16 — ZenRay Audio dans Create
+
+**Contexte et structure.** ZenRay Audio reste une vue du dossier Create : le fil d’Ariane, le retour aux dossiers et la fenêtre Create restent disponibles. Sa structure est stable, mais redimensionnable : bibliothèque à gauche, contenu au centre, contexte et file à droite, player unique commun en bas. Les actions qui masquent une colonne ou échangent les deux panneaux ne déplacent jamais le player.
+
+**Liquid Glass Normal.** Employer `liquidGlassNormal` pour la coque, les panneaux, le menu contextuel et le player. La transparence révèle seulement le fond existant et une teinte très discrète dérivée de la pochette courante. Interdits : grand aplat gris opaque, gradient bleu/rose décoratif fixe, plusieurs couleurs d’accent simultanées. Le texte conserve un contraste lisible en clair et en sombre. Les transformations d’état s’appuient sur le fondu et la courbe EaseOutExpo, durée 0,30 s ; aucune transition ne doit gêner play, pause ou seek.
+
+**Lecteur.** Le player traverse les trois colonnes, garde les commandes lecture, précédent, suivant, shuffle, repeat, vitesse locale, volume et la barre de position réellement cliquable. Les fichiers locaux audio empruntent le endpoint HTTP Range déterministe : aucun premier play ne dépend du registre mémoire d’un Service Worker. Les liens Spotify sans SDK utilisent un embed explicitement affiché, les liens YouTube utilisent le même player invisible et les commandes restent cohérentes.
+
+**Interactions.** Double-clic sur un titre lance la piste ; clic droit ouvre Lire maintenant, Lire ensuite, file, playlist, copier le lien et source. Ajout par dépôt/fichier et par URL Spotify ou YouTube gardent le même point d’entrée. Les contrôles sont des capsules entières avec `border-radius: 999px`; une flèche ou une icône intégrée n’est jamais un faux second bouton.
+
+## 2026-07-17 — Liquid Glass : la vraie physique du dépoli (frosted), pas du verre poli
+
+**Contexte.** Retour Matthieu sur une première tentative de boutons circulaires liquid glass (lecteur vidéo, `Memory/Design/ReusableComponentsButtons/`) : « les reflets mathématiques ne sont pas bon et font cheap + il y a un effet frosted [manquant] ». Deux images de référence produites pour isoler le problème : `Memory/Design/RefPlayer.png` (boutons réels sur fond magenta uni — isole la matière du fond photo) et `Memory/Design/RefPlayer2.jpeg` (capture Control Center iOS réel, y compris un widget Now Playing avec exactement les boutons -10/lecture/+10 déjà construits ici).
+
+**Erreur initiale (V1), diagnostic.** Remplissage SOMBRE (`rgba(20,20,20,.38)`) + `backdrop-filter: blur() saturate(160-200%)` + un `radial-gradient` directionnel façon reflet de sphère polie. Deux fautes de modèle optique :
+1. `saturate(180%)` sur un fond DÉJÀ vif (magenta) le rend PLUS vif, l'inverse de l'effet dépoli voulu — un backdrop-filter saturate boost est correct sur un fond neutre/terne, jamais sur un fond déjà saturé.
+2. Un highlight radial localisé = modèle du verre CLAIR/poli (réflexion spéculaire nette). Le verre DÉPOLI (sablé) diffuse la lumière dans toutes les directions : pas de tache nette, un voile clair globalement UNIFORME.
+
+**Correction (V2), recette validée sur fond magenta :**
+- Remplissage CLAIR translucide (`rgba(255,255,255,.28-.32)`), jamais sombre.
+- `backdrop-filter: blur(20-24px) saturate(60-70%) brightness(1.3-1.4)` — DÉSATURER et ÉCLAIRCIR le fond capté, pas le saturer. C'est la désaturation qui donne le côté givré.
+- Un grain fin en overlay (`feTurbulence` SVG en data-URI, `mix-blend-mode:overlay`, opacité ~4-5%) : sans lui, même la bonne couleur reste trop propre/plastique pour lire comme dépoli.
+
+**Le rim (liseré) : effet Fresnel, pas un anneau uniforme.** Deuxième retour (RefPlayer2.jpeg, Control Center réel) : « léger trait blanc contrasté EN HAUT ET EN BAS et disparition au milieu [les côtés] ». Un anneau `box-shadow: inset 0 0 0 1px` (visible partout à égalité) est faux : la physique réelle est un effet Fresnel — les arêtes vues en incidence rasante (haut ET bas d'un cercle, éclairé du dessus) réfléchissent plus de lumière que les arêtes de face (les côtés). Recette : bordure à GRADIENT ANGULAIRE, pas un anneau plat —
+```css
+border: 1.5px solid transparent;
+background:
+  linear-gradient(var(--fill), var(--fill)) padding-box,
+  conic-gradient(from 0deg,
+    rgba(255,255,255,.85) 0deg,   /* haut : brillant */
+    rgba(255,255,255,0) 78deg,    /* côté droit : transparent */
+    rgba(255,255,255,0) 102deg,
+    rgba(255,255,255,.40) 180deg, /* bas : brillant mais plus sombre (lumière ambiante réfléchie, pas la source directe) */
+    rgba(255,255,255,0) 258deg,   /* côté gauche : transparent */
+    rgba(255,255,255,0) 282deg,
+    rgba(255,255,255,.85) 360deg
+  ) border-box;
+```
+Premier essai trop fort (78-102°/258-282° trop resserrés + pic à .85 trop net) : lu comme une sphère chromée/métallique, pas du verre dépoli — nécessite un pic plus bas et une transition plus large/progressive pour rester doux (raffinement en cours, pas encore figé).
+
+**Icônes : ne jamais approximer à la main un SF Symbol qui existe.** `gobackward`/`goforward` (Icon.jsx) étaient dessinés à la main (anneau + « 10 » improvisés) — rendu cassé en usage réel. Retour Matthieu : « complètement buggé, il suffisait de prendre lui dans sf symbols ». Corrigé avec l'export réel Apple CoreSVG `10.arrow.trianglehead.counterclockwise` (même traitement que `gear` : fill hardcodé retiré, hérite `currentColor`). `goforward` n'a pas d'export dédié fourni : dérivé par miroir horizontal exact du counterclockwise (le chiffre « 10 » reste à l'endroit, seul l'anneau/flèche est retourné) — technique standard (comme « redo » dérivé de « undo »), jamais une invention de nouvelle iconographie. Règle générale à retenir : chercher/demander l'export SF Symbols réel AVANT de dessiner une approximation, même pour une icône qui semble simple.
+
+**Ouvert, non tranché (2026-07-17).** Retour Matthieu : la réflexion ci-dessus ne couvre que les formes CIRCULAIRES — « il manque aussi les boîtes carrées / rectangle / capsule / buttons / round ». Le `conic-gradient` en angle-depuis-le-centre reste valide géométriquement pour une pilule/rectangle (0°=haut, 180°=bas, 90°/270°=côtés, quel que soit le ratio largeur/hauteur), mais le rendu visuel sur une forme très allongée (grande largeur, capuchons arrondis courts) n'est pas encore vérifié à l'œil — à valider avant de le considérer comme la norme universelle pour TOUTE forme liquid glass du projet (pas seulement les boutons ronds du lecteur).
+
+## INDEX du fichier (2026-07-17)
+| Section | Contenu |
+|---|---|
+| 2026-07-17 — Liquid Glass : la vraie physique du dépoli | Recette frosted corrigée (fill clair + désaturation/éclaircissement, pas saturation), rim Fresnel en conic-gradient (bright haut+bas, transparent côtés), icônes SF Symbols réelles jamais approximées, ouvert : généraliser aux formes non-circulaires |
+
+## 2026-07-17 Correction V5 Liquid Glass normal
+
+**Statut : norme retenue, validée dans le prototype isolé.** Référence canonique :
+`/Users/zenray/Create/Build/Memory/Design/ReusableComponentsButtons/glass-math-test.html`.
+Cette entrée complète et remplace l’état normatif « ouvert » de l’entrée précédente, sans réécrire son
+historique.
+
+**Conic-gradient abandonné.** La bordure angulaire créait un effet de sphère chromée ou métallique : elle
+part du centre, change selon le ratio, et lit faux sur une capsule longue ou un rectangle. Ce n’est pas le
+rim du Control Center. Ne plus l’utiliser ni sur les boutons ronds, ni sur les capsules, ni sur les panneaux.
+
+**Recette universelle V5.**
+
+```css
+--fill: rgba(255,255,255,.26);
+--blur: blur(22px) saturate(70%) brightness(1.28);
+--rim-edge: rgba(255,255,255,.55);
+--rim: inset 0 1px 0 var(--rim-edge), inset 0 -1px 0 var(--rim-edge);
+--shadow: 0 2px 10px rgba(0,0,0,.14);
+```
+
+- Le fill reste clair, uniforme et dépoli. Aucun blob radial, aucun highlight spéculaire local.
+- Le rim est seulement en haut et en bas : les deux `inset` ont la même valeur pour une symétrie réelle ;
+  les côtés s’effacent naturellement. Aucun `border` ou `inset 0 0 0 1px` visible tout autour.
+- Le grain `feTurbulence` SVG est posé en overlay à environ 5 % d’opacité pour retirer l’aspect plastique.
+- La même matière s’applique aux boutons ronds, capsules et cartes. Seul le rayon change : `999px` pour une
+  vraie capsule ou un cercle, rayon fixe pour un rectangle arrondi. Un état actif devient opaque blanc ou
+  teinté et ne garde pas le rim.
+- Ne pas poser `backdrop-filter` sur une zone qui scrolle : coque glass fixe, scroller interne séparé.
+
+**Implémentation.** Cette V5 pilote désormais ZenRay Audio, le PlayerBar global et les contrôles propriétaires
+du lecteur vidéo. Elle est la base obligatoire des futurs boutons et panneaux ZenRay.
+
+## INDEX du fichier 2026-07-17 V5
+
+| Section | Contenu |
+|---|---|
+| 2026-07-17 Correction V5 Liquid Glass normal | Norme finale : fill dépoli clair, blur 22px désaturé, noise fin, rim haut/bas par deux inset identiques ; conic-gradient abandonné car faux sur capsules et rectangles |
+
+## 2026-07-17 Correction transport ZenRay Audio V5
+
+**Écart constaté en production.** La recette V5 était déclarée appliquée, mais le transport réel conservait
+encore une timebar native, sans matière ni rim, et son footer ne réservait pas la hauteur du bouton lecture
+92 px. Le résultat semblait être une ligne ajoutée sous des boutons, au lieu d’un groupe de contrôles
+liquid glass cohérent.
+
+**Application retenue.** Les commandes sont désormais des primitives explicites du mockup canonique
+`ReusableComponentsButtons/glass-math-test.html` : actions secondaires 48 px, seek ±10 s 64 px, lecture
+92 px. La progression est une capsule 48 px avec les temps aux extrémités ; le volume garde sa capsule
+48 px avec track interne et symbole haut-parleur. Les deux utilisent exactement `--fill`, `--blur`, grain et
+rim V5. Le footer réserve 166 px, donc ni le play ni la timebar ne débordent dans le contenu.
+
+**Interdit.** Ne jamais réintroduire un `<input type=range>` nu : le composant conserve son contrat clavier,
+drag et seek unique, mais il doit toujours être posé dans une capsule glass. Ne jamais convertir le rim en
+`conic-gradient` : cette variante est abandonnée car elle lit chrome/métal et se déforme visuellement selon
+le ratio des capsules.
+
+## INDEX du fichier 2026-07-17 transport V5
+
+| Section | Contenu |
+|---|---|
+| 2026-07-17 Correction V5 Liquid Glass normal | Recette universelle et abandon du conic-gradient |
+| 2026-07-17 Correction transport ZenRay Audio V5 | Play 92 px, ±10 s 64 px, actions 48 px, progression et volume en capsules glass ; aucun range nu |
+
+## 2026-07-17 Lecteur vidéo V5
+
+**Statut.** Le lecteur vidéo propriétaire reprend la même matière que le transport audio : lecture centrale
+92 px, actions simples 48 px, sauts de 10 secondes 64 px, barre de lecture et volume dans des capsules
+glass de 48 px. La barre de lecture affiche la progression blanche et le tampon vidéo, tout en conservant
+le clavier, le glisser-déposer du curseur et le seek précis du navigateur.
+
+**Matière.** Chaque contrôle emploie le remplissage clair translucide, le blur désaturé, le grain et le rim
+haut/bas V5. Les ombres ne remplacent jamais le rim. Le `conic-gradient` reste abandonné : il crée un effet
+chrome circulaire faux et se déforme sur les capsules longues, alors que deux bords inset restent stables
+sur un cercle, une capsule, une carte ou un contrôle vidéo.
+
+**Limite assumée.** Les vidéos YouTube gardent leurs contrôles intégrés : un iframe cross-origin ne permet
+pas de reconstruire un transport fiable. Les fichiers et streams ZenRay utilisent le lecteur V5 complet.
+
+## INDEX du fichier 2026-07-17 vidéo V5
+
+| Section | Contenu |
+|---|---|
+| 2026-07-17 Lecteur vidéo V5 | Contrôles 48/64/92 px, progression tamponnée, volume et actions en capsules V5 ; YouTube conserve son lecteur natif |
+
+## 2026-08-21 — Le trio typographique système devient la norme courante
+
+Cette entrée remplace les anciennes consignes de graisse de la Partie I et de la Partie II sans réécrire leur historique. Toute nouvelle UI suit désormais trois familles :
+
+- **AnthropicSerif, 350** : contenu éditorial et tous les nombres visibles, notamment les compteurs, durées, dates, prix et quantités.
+- **Inter, Regular 400 maximum** : interface, chrome, boutons, labels et texte fonctionnel. Light 300 est interdit, comme toute graisse supérieure à 400.
+- **AnthropicMono** : code, chemins, hash et identifiants techniques qui doivent rester monospace.
+
+Un nombre reste AnthropicSerif même lorsqu'il est intégré à un bouton ou à une métadonnée lisible. AnthropicMono reste réservé aux données techniques réellement monospace.
+
+**Diagnostic YouTube Guard.** La capture du 21 août montre le texte fonctionnel trop fin parce que la page employait `system-ui` à `font-weight:300`. La cause est donc la déclaration CSS Light, non un anti-aliasing excessif. Le correctif passe le texte et le bouton à Inter Regular 400, conserve le titre en AnthropicSerif 350 et rend le compteur en AnthropicSerif.
+
+## INDEX du fichier 2026-08-21
+
+| Section | Contenu |
+|---|---|
+| 2026-08-21 — Trio typographique système | AnthropicSerif 350 pour le contenu et les nombres ; Inter Regular 400 maximum pour l'interface ; AnthropicMono pour le code et les données techniques ; cause du rendu Light de YouTube Guard identifiée |
+
+## 2026-08-21 — Correction de la graisse des nombres
+
+Correction de l'entrée du 2026-08-21 : les nombres visibles restent en AnthropicSerif, mais leur coupe est Regular 400. AnthropicSerif 350 reste réservé au contenu éditorial et aux titres de contenu. Inter reste Regular 400 maximum pour l'interface ; AnthropicMono reste réservé au code et aux données techniques.
+
+Cette correction s'applique aux compteurs, durées, dates, prix et quantités, y compris lorsqu'ils sont intégrés à un bouton ou à une métadonnée lisible.
+
+## INDEX du fichier 2026-08-21, correction
+
+| Section | Contenu |
+|---|---|
+| 2026-08-21 — Correction de la graisse des nombres | Nombres en AnthropicSerif Regular 400 ; contenu en AnthropicSerif 350 ; Inter Regular 400 maximum ; AnthropicMono technique |
+
+
+## Correction UI validée le 2026-09-03 : InterVariable et sidebar Liquid Glass
+
+Pour les interfaces ZenRay, utiliser la famille `InterVariable` Regular 400, avec le fichier de police embarqué et déclaré par `@font-face`. Le repli Hiragino sert uniquement aux caractères japonais absents d’Inter. Le nom CSS seul ne prouve pas la police rendue : vérifier une phrase latine dans le navigateur. Cette précision remplace les prescriptions de nom `Inter` non accompagné d’une face servie.
+
+L’atelier `zenray-html-photoshop-pdf-hda-socialmedia` utilise un thème clair par défaut et un thème sombre cohérent pour tout son chrome, tous deux issus de `Memory/Design/ZenRayProgress/UI/10-sidebar.html` et de sa matière sidebar `g9`. Les panneaux Photos et Post, champs, boutons et fenêtres partagent les mêmes tokens Liquid Glass. Le texte du post ne dépasse pas 13 px CSS sur l’écran 4K de Matthieu ; les pixels physiques et la résolution d’export ne changent pas cette taille CSS. Les compositions exportées conservent leurs paramètres artistiques.

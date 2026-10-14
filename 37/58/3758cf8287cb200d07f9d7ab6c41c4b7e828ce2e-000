@@ -1,0 +1,422 @@
+# Tout code produit est un HDA — la loi complète
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Every piece of code is an HDA - parametric law.
+>
+> **Vocabulaire déclencheur (114 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> hda · houdini digital asset · paramétrique · paramètre · paramètres · valeur en dur · hardcodé · littéral · magic number · constante · variable · token · jeton · design token · theme · tokens.css · config · configuration · dataclass · props · defaults · duplication · copier-coller · dupliqué · factoriser · refactor · abstraction · modulaire · réutilisable · instance · gabarit · template · définition · bibliothèque · otls · survit au projet · page blanche · repartir de zéro · deux occurrences · échec critique · décomposition · cascade · famille · recensement · valeur système · axlist · dock · nsscreen · préférence · defaults read · mesurer · deviner · à l'œil · estimation · fallback · repli · source de vérité · 8 paramètres · huit paramètres · paramètres prioritaires · spare parm · spare parameter · control node · noeud maître · chf( · interface de paramètres · tweaker · index mapping · mapping table · table de correspondance · hyperframes · motion design · itérable · itération · versions · v_001 · projet réutilisable · montage · éditable · modifiable · paramétrable · sans aller-retour · sans back and forth · back and forth · paramètres procéduraux · interface claire · substance designer · texture substance · modifier moi-même · je modifie moi-même · panneau de paramètres · tout ce que tu crées · parametric · hardcoded value · single source · dry · don't repeat yourself · template instance · asset library · boilerplate · system value · accessibility api · measured value · fallback source · lookup table · reusable project · versioned instance · iterable · editable · parametrizable · procedural parameters · clear interface · no back and forth · user-editable parameters
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/Houdini/Houdini1.md`
+> - `~/.claude/Memory1/Design/Design1.md`
+> - `~/.claude/Memory1/Substance/Substance1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## PRIORITÉ 0 ABSOLUE : TOUT CODE PRODUIT EST UN HDA (2026-08-15)
+
+**La règle, dans les mots de Matthieu.** Chaque application créée et chaque
+morceau de code écrit désormais est un HDA : du code paramétrable, modulaire,
+éditable, dont toute valeur se change en un point central et jamais en dix
+endroits, instancié plutôt que recopié. Un code qui ne respecte pas cela n'est
+pas un code perfectible, c'est un **échec critique**. Il se refait
+immédiatement, il ne se livre pas accompagné d'une note d'excuse.
+
+HDA veut dire Houdini Digital Asset, l'objet par lequel Houdini encapsule un
+réseau entier derrière un nœud unique, doté de sa propre interface de
+paramètres. Une définition existe une seule fois, elle se pose autant de fois
+qu'on veut dans la scène, et corriger la définition met à jour toutes les
+instances du même coup. C'est exactement le contrat qu'on veut du code.
+
+### La transposition terme pour terme, et ce qu'elle devient hors du visuel
+
+| Houdini | Le sens général, valable partout | Cas du visuel, où la règle est née |
+|---|---|---|
+| La définition du HDA | Le gabarit, un seul endroit, sans aucune valeur littérale | un fichier HTML ou SVG de gabarit |
+| L'interface de paramètres | Le fichier ou la structure qui porte TOUTES les valeurs | `_params.json` plus les variables CSS |
+| Une instance posée dans la scène | Un appel, une configuration, un objet construit | un PNG rendu et numéroté |
+| Le cook, l'évaluation du nœud | Le build, la compilation, l'instanciation au moment de l'exécution | `build.py` |
+| Les Type Properties | La déclaration des paramètres et de leurs valeurs par défaut | le bloc `families` du JSON |
+| **La bibliothèque `otls/`** | **L'endroit durable où la définition SURVIT au projet, et d'où part le suivant** | **le dossier `templates/` du skill concerné** |
+
+**Deux corrections à porter, sous peine de transposer de travers.** Dans
+Houdini, l'interface de paramètres vit à l'intérieur de la définition, elle
+n'est pas un fichier séparé ; l'externaliser dans un `_params.json` est notre
+adaptation, choisie parce qu'un fichier de valeurs se relit et se versionne
+mieux qu'une structure noyée dans du code. Et la formule « l'instance devient un
+PNG rendu, le cook devient build.py » ne vaut que pour un visuel : ailleurs,
+l'instance est un appel de fonction, un composant monté, un acteur placé dans un
+niveau, une ligne de configuration, et le cook est simplement le moment où la
+chose se construit.
+
+### LA BIBLIOTHÈQUE : un travail fait n'est jamais perdu, il est la source du suivant (2026-09-01)
+
+**Le terme manquant, et son oubli coûte cher.** Les cinq lignes ci-dessus
+décrivent un HDA À L'INTÉRIEUR d'une scène, et c'est incomplet. Dans Houdini,
+un HDA ne meurt pas avec le fichier qui l'utilise : sa définition vit dans une
+bibliothèque `otls/`, sur le disque, hors de toute scène, et c'est de là que
+chaque nouvelle scène la charge. **Sans la bibliothèque, le HDA n'est qu'un
+nœud propre dans un fichier qu'on refera de zéro la fois suivante.**
+
+**Les mots de Matthieu, le 2026-09-01, qui posent la règle :**
+
+> « Un travail fait n'est jamais perdu, il est sauvegardé quelque part, le plus
+> souvent à l'intérieur des propres skills. Cette base nous permet de régénérer
+> la suivante à la manière d'un template d'une instance. Chaque travail généré
+> n'est jamais perdu, il est la source de la prochaine modification. On améliore
+> quelque chose d'existant, on ne repart pas d'une page blanche, c'est comme ça
+> qu'on construit. »
+
+**Où vit la bibliothèque, selon la nature de la chose.** La règle est de la
+poser à l'endroit qui SURVIT au projet, et le skill est presque toujours cet
+endroit, puisqu'il est lu au début de chaque session et synchronisé vers Codex
+et Memory.
+
+| Ce qui est produit | Où sa définition doit survivre |
+|---|---|
+| Un outil, une page d'atelier, un gabarit HTML | `~/.claude/skills/<skill>/templates/` |
+| Un script qui refera le même geste | `~/.claude/skills/<skill>/scripts/`, ou `<projet>/Scripts/` |
+| Une méthode, un protocole, un piège payé | le corps du `SKILL.md` concerné |
+| Une connaissance durable de projet | le `Memory/<domaine>/<Nom>1.md` du domaine |
+| Un jeu de valeurs validé à l'œil | le fichier de jetons du projet |
+
+**Ce que la règle impose, avant d'écrire quoi que ce soit.** La première
+question devant une demande de fabrication n'est pas « comment je le fais »
+mais **« qu'est-ce qui existe déjà, et que puis-je instancier »**. On cherche
+dans `templates/`, dans `scripts/`, dans les instances précédentes, et on part
+de là. Repartir d'une page blanche quand une base existe est une faute, pas un
+choix de style, et elle se mesure : sur ce skill, une page blanche coûtait plus
+de trente mille tokens et plusieurs minutes, l'instanciation coûte moins d'une
+seconde et zéro token de génération.
+
+**Ce que la règle impose, après avoir fabriqué.** Le travail ne se termine pas
+au livrable : il se termine quand sa définition est rangée dans la
+bibliothèque. Un HTML d'atelier qui a bien marché retourne dans `templates/`
+débarrassé de ses valeurs de projet. Un script qui a servi retourne dans
+`scripts/`. Une méthode retourne dans le `SKILL.md`. **Le second exemplaire ne
+doit jamais coûter le prix du premier.**
+
+**Le symptôme qui doit alerter, et il est facile à reconnaître.** Je suis en
+train de retaper un fichier que j'ai déjà écrit, en n'y changeant qu'une liste,
+un chemin ou un nom. Dès que cette phrase est vraie, ce n'est plus un livrable
+à écrire mais un gabarit à instancier, et il faut s'arrêter pour extraire le
+gabarit avant de continuer.
+
+**Le corollaire, qui est un interdit.** Puisque l'existant est la source du
+suivant, **on ne le détruit jamais** : une régénération, un renommage ou une
+correction ne touche que le code, et laisse intacts les fichiers de travail,
+les paramètres déjà réglés et les sorties déjà produites. Si un écrasement est
+inévitable, on sauvegarde d'abord et on le dit ; jamais en silence.
+
+### L'interface de paramètres prend la forme du langage
+
+Le principe ne change jamais, seul son support change. Un fichier `_params.json`
+n'a rien d'obligatoire en dehors du web.
+
+| Contexte | La définition | L'interface de paramètres | L'instance |
+|---|---|---|---|
+| HTML et CSS | gabarit sans littéral | `_params.json` plus les variables de `:root` | un rendu, un nœud du DOM |
+| Python | une fonction pure ou une classe | une `dataclass` de configuration, `config.py`, `params.yaml` | un appel avec son jeu d'arguments |
+| TypeScript et React | un composant | son type de props, un objet `defaults` exporté, `tokens.ts` | une balise JSX avec ses props |
+| Node et outils en ligne de commande | une fonction de commande | un objet d'options avec ses valeurs par défaut nommées | une invocation |
+| Unreal Engine, C++ et Blueprint | une classe `UObject` ou un Blueprint parent | des `UPROPERTY(EditAnywhere)`, un `UDataAsset`, une `UDataTable`, une `UCurveTable` | un acteur placé, un Blueprint enfant |
+| Shell | le script | des variables en tête de fichier, jamais une valeur au milieu du corps | une invocation avec ses arguments |
+| SQL | une requête préparée | des paramètres liés, jamais un littéral dans le texte de la requête | une exécution |
+| Terraform | un module | `variables.tf` plus `terraform.tfvars` | un bloc `module` |
+| Cloudflare Workers | le worker | `wrangler.toml`, ses `vars`, ses secrets | un déploiement, une route |
+| Shader et matériau | le graphe ou le fichier de shader | les paramètres exposés, une instance de matériau | une instance appliquée à un objet |
+
+### Les trois étages de paramètres, jamais mélangés
+
+| Étage | Ce qu'on y met | Exemple hors visuel |
+|---|---|---|
+| Jetons globaux | ce qui vaut pour tout le projet | palette, délais réseau, chemins racine, seuils de journalisation |
+| Paramètres de famille | ce qui vaut pour toutes les instances d'un même type | la taille par défaut d'un composant, la politique de retente d'un client HTTP |
+| Surcharges d'instance | ce qui ne vaut que pour un cas précis | une couleur particulière, un délai plus long sur un seul appel |
+
+La cascade va de l'instance vers la famille vers les jetons, exactement comme en
+CSS. Une surcharge d'instance l'emporte, elle ne modifie jamais sa famille.
+
+### Le recensement des familles précède toute production
+
+Avant d'écrire la première ligne, on liste ce que la chose contient et on
+regroupe ce qui partage des propriétés. Deux éléments qui ne diffèrent que par
+une valeur ne sont jamais deux objets, ils sont un gabarit et deux jeux de
+paramètres. Ce recensement s'écrit dans le README du projet, en tableau, famille
+par famille, avec les paramètres exposés. C'est lui qui empêche la duplication
+sur le moment, et c'est encore lui qu'on relit six mois plus tard pour savoir où
+toucher.
+
+### La règle des deux occurrences, garde-fou indispensable
+
+Cette loi ne contredit pas les Karpathy Guidelines inscrites plus bas, qui
+interdisent l'abstraction spéculative ; elle en fixe le seuil, et sans ce seuil
+elle produirait exactement le défaut qu'elle prétend corriger. On paramètre ce
+qui varie **déjà**, jamais ce qui pourrait varier un jour. Concrètement, dès la
+deuxième occurrence d'une même chose, elle devient un gabarit et deux jeux de
+paramètres ; à la première occurrence, elle reste écrite simplement, en clair.
+Une interface de paramètres bâtie pour un besoin imaginaire est un défaut de
+production au même titre qu'une valeur en dur.
+
+### Les sept échecs critiques
+
+1. Une valeur littérale dans une définition, qu'il s'agisse d'une couleur, d'une
+   taille, d'un seuil, d'une adresse, d'un chemin, d'un délai ou d'un
+   identifiant.
+2. Un bloc copié-collé pour en changer une seule valeur.
+3. Une modification qui oblige à toucher plusieurs endroits pour un seul effet.
+4. Un paramètre non résolu qui passe en silence au lieu de lever une erreur qui
+   le nomme.
+5. Une définition dupliquée là où une instance suffisait.
+6. **Une définition qui meurt avec son projet**, parce qu'elle n'a jamais été
+   rangée dans la bibliothèque : le travail suivant repart alors d'une page
+   blanche, et paie une deuxième fois ce qui était déjà résolu.
+7. **Repartir d'une page blanche alors qu'un gabarit existe**, faute d'avoir
+   cherché dans `templates/` et `scripts/` du skill concerné avant de
+   commencer.
+
+### Le test qui valide une décomposition, à passer avant de livrer
+
+Changer un comportement, une valeur ou une apparence doit se faire à un seul
+endroit, se propager partout où cette valeur a du sens, et nulle part ailleurs.
+Le test échoue de deux façons symétriques, et les deux comptent : si teindre
+vingt barres d'un classement demande vingt modifications, la décomposition est
+ratée et se refait tout de suite ; si changer la couleur d'une seule ligne force
+à toucher les dix-neuf autres, le paramètre est simplement rangé au mauvais
+étage.
+
+Deux vérifications closent le travail, quel que soit le langage. La première
+cherche les littéraux restés dans les définitions. La seconde vaut ordre plutôt
+que contrôle : le moteur de gabarit, le constructeur ou le lecteur de
+configuration **lève une erreur nommant le paramètre manquant**, il ne produit
+jamais un résultat partiel.
+
+### Le sixième échec, et c'est celui que je commets vraiment (2026-08-27)
+
+**Fabriquer une seconde recette parce que la recette commune ne rend pas ce
+qu'on attend.** Les cinq échecs ci-dessus décrivent des duplications qu'on voit
+en les écrivant ; celui-ci se déguise en correctif, et c'est pour cela qu'il
+passe.
+
+Le cas payé. Un popover de ZenRayPlan s'affichait presque noir quand tout le
+reste du Plan est gris. Je lui ai donné la recette commune, verre translucide
+plus flou d'arrière-plan, et il est devenu ENTIÈREMENT transparent. J'en ai
+conclu que le verre était impossible ici et j'ai fabriqué deux gris opaques par
+thème, soigneusement dérivés, soigneusement commentés. Matthieu a coupé court :
+« je veux l'esthétique de ZenRayPlan, tout simplement, arrête d'inventer, ça va
+juste au premier plan ». Il avait raison. Le verre ne marchait pas parce qu'un
+ancêtre le neutralisait ; il suffisait de sortir le popover de cet ancêtre, et
+la recette commune rendait alors exactement ce qu'elle rend partout ailleurs.
+
+**La règle.** Quand un élément ne ressemble pas à ses voisins, la question n'est
+jamais « quelle valeur lui donner » mais « pourquoi la recette commune ne
+s'applique-t-elle pas ici ». Une couleur, une taille ou une ombre écrite en
+propre pour un seul élément est un aveu : on a renoncé à comprendre, et la
+seconde vérité qu'on vient de poser divergera au premier réglage du jeton
+commun, sans que rien ne le signale.
+
+**Le signal qui doit alerter, et il est net.** Dès que je m'apprête à écrire une
+valeur visuelle qu'aucun autre élément du projet ne porte, alors qu'un jeton
+existe pour ce rôle. Le réflexe juste est de chercher l'obstacle, pas de le
+contourner.
+
+**Ce que cela ne dit pas.** Certains éléments ont légitimement leur propre
+valeur, et la règle des deux occurrences plus haut tranche ce cas. La faute
+n'est pas d'écrire une valeur, c'est d'en écrire une POUR REMPLACER un jeton qui
+aurait dû s'appliquer.
+
+### LES VALEURS SYSTÈME SE CHERCHENT AVANT DE SE DEVINER (incident AXList, 2026-08-30)
+
+Un paramètre qui dépend du système ne se choisit jamais à l’œil et ne se
+déduit jamais d’une capture seule. Il faut toujours chercher l’endroit qui
+contient la vérité, puis lire cette valeur dans son contexte réel. Cette règle
+vient d’un incident concret : Matthieu a dû insister pour que la taille du Dock
+soit réellement recherchée, alors que plusieurs hauteurs de widget avaient
+d’abord été choisies à l’œil. Son insistance révèle un défaut de méthode, pas un
+besoin de retoucher encore une valeur au hasard.
+
+**Ce qui déclenche la recherche.** Une valeur est considérée comme système dès
+qu’elle peut changer avec macOS, un réglage utilisateur, un écran, une
+permission, un périphérique, une résolution, un scale factor, une application
+externe, un fichier de configuration ou l’état runtime. Exemples : taille et
+position du Dock, hauteur de la barre des menus, safe area, bounds d’une
+fenêtre, taille d’une police installée, résolution d’écran, espace réservé par
+un système, niveau audio, chemin d’un service ou valeur d’une préférence.
+
+**La hiérarchie des preuves.** Chercher dans cet ordre, en s’arrêtant à la
+première source disponible qui décrit réellement la valeur :
+
+| Rang | Source | Ce qu’elle prouve |
+|---|---|---|
+| 1 | API runtime du système ou de l’application propriétaire | la valeur utilisée maintenant |
+| 2 | préférence ou fichier de configuration du système | la valeur persistée qui gouverne le runtime |
+| 3 | observation indépendante du runtime | la valeur réellement exposée par l’interface |
+| 4 | capture mesurée au pixel près | la forme visible d’un état précis |
+| 5 | estimation ou constante choisie | seulement un token explicitement provisoire, jamais une vérité système |
+
+Une capture reste une preuve visuelle d’un état donné, mais elle ne remplace
+pas l’API qui produit cet état. Une estimation peut servir uniquement quand la
+demande porte sur un prototype libre et qu’elle est nommée comme telle. Elle ne
+doit jamais être présentée comme une mesure du système.
+
+**Le protocole obligatoire avant d’écrire le code.**
+
+1. Formuler la valeur à obtenir avec son unité et son repère : points, pixels,
+   secondes, coordonnées AppKit, coordonnées écran, coordonnées fenêtre ou
+   pourcentage.
+2. Chercher la source qui possède cette valeur dans le vocabulaire du code et
+   du système. Chercher le geste technique, pas seulement le nom de la
+   fonctionnalité : `AXUIElement`, `kAXSizeAttribute`, `CFPreferences`,
+   `NSScreen`, `CGDisplay`, `getBoundingClientRect`, `system_profiler` ou la
+   clé de préférence concernée.
+3. Lire la valeur par une commande ou une API locale. Ne pas remplir le blanc
+   avec une constante parce qu’une valeur plausible est déjà connue.
+4. Contrôler la valeur par une seconde voie indépendante dès que le risque est
+   visuel ou système : log runtime contre commande externe, API contre
+   préférence, fenêtre contre capture, ou mesure du code contre mesure du
+   rendu.
+5. Écrire la source, l’unité, le repère, la date et le résultat dans la
+   documentation ou l’état du projet.
+6. Centraliser la valeur et ses secours dans l’interface HDA du projet. Le
+   composant consomme le paramètre, il ne recopie pas le littéral.
+7. Logguer la source effectivement choisie. `accessibility`, `preferences`,
+   `runtime`, `measured` et `fallback` ne sont pas interchangeables.
+8. Vérifier après build et installation que la valeur runtime correspond à la
+   valeur mesurée. Une compilation réussie ne prouve rien sur la géométrie.
+
+**Exemple complet du Dock macOS.** Pour Sleep Shutdown, `NSScreen.visibleFrame`
+expose `minY = 67 pt`, mais ce nombre représente la zone réservée au Dock, pas
+la hauteur de la barre visible et pas son bord inférieur. Le processus Dock
+expose un élément Accessibility `AXList`. La lecture de
+`kAXPositionAttribute` et `kAXSizeAttribute` donne la barre réellement
+affichée. Sur la machine observée :
+
+```text
+NSScreen.frame                 1728 × 1117 pt
+NSScreen.visibleFrame.minY     67 pt, zone réservée
+Dock AXList                    666 × 61 pt, barre visible
+inset bas AX                   10 pt
+```
+
+Les commandes qui établissent cette preuve sont :
+
+```zsh
+defaults read com.apple.dock tilesize
+osascript -e 'tell application "System Events" to tell process "Dock" to get {role, position, size} of every UI element'
+osascript -e 'tell application "System Events" to tell process "SleepShutdown" to get {position of window 1, size of window 1}'
+```
+
+Le réglage persistant `tilesize = 47` fournit un secours utile quand
+l’application ne possède pas la permission Accessibility. Avec le padding
+vertical mesuré de `14 pt`, la hauteur dérivée vaut `47 + 14 = 61 pt`. Cette
+formule est acceptable parce qu’elle est issue de deux valeurs explicites et
+qu’elle est comparée à `AXList = 61 pt`. Elle ne serait pas acceptable si `61`
+avait simplement été inventé pour ressembler à la capture.
+
+La résolution correcte est donc :
+
+```text
+1. AXList du Dock, si accessible
+2. com.apple.dock, si AX est refusé
+3. fallback explicitement nommé, si les deux sources manquent
+4. jamais visibleFrame.minY utilisé comme hauteur graphique du Dock
+```
+
+Le log de Sleep Shutdown doit dire quelle voie a servi :
+
+```text
+Dock source: preferences, height: 61.0 pt, bottom inset: 8.0 pt
+widget size: 360.0 × 61.0 pt
+```
+
+Le fait que l’application utilise ici `preferences` n’est pas caché : Terminal
+peut lire `AXList` alors que l’application n’est pas autorisée. Le résultat est
+validé parce que la préférence `47 + 14` rejoint la mesure AX indépendante de
+`61`, et parce que la fenêtre installée est mesurée à `360 × 61 pt`.
+
+**Permission refusée, donnée absente et donnée non trouvée sont trois états
+différents.** Une API qui renvoie un refus ne permet pas de conclure que la
+valeur n’existe pas. Chercher alors une autre source propriétaire, sans
+fabriquer de valeur. Une préférence manquante ne permet pas de conclure que la
+valeur vaut zéro. Une capture ambiguë ne permet pas de conclure que deux
+éléments sont alignés. Le code doit garder la source et l’état visibles, ou
+lever une erreur qui nomme la donnée manquante.
+
+**La règle vaut aussi pour le web.** Un navigateur ne possède pas une API
+générale pour lire `com.apple.dock` ou interroger l’Accessibility API du Dock.
+Il reçoit une mesure native injectée par le contexte, ou un token de
+démonstration nommé comme tel. Une fonction fictive `getDockHeight()` n’est pas
+une intégration système. Dans une transposition HTML, écrire `dockHeight: 61`
+avec sa source et son état vaut mieux que prétendre obtenir dynamiquement une
+donnée que le navigateur ne peut pas lire.
+
+**Le contrôle HDA ferme la recherche.** Toute valeur système qui entre dans la
+géométrie ou le comportement sort dans un paramètre central. Le résolveur
+retourne une structure contenant la valeur, la source et l’unité. Le composant
+ne lit jamais un littéral concurrent. La recherche finale porte sur les
+valeurs et sur leurs clés :
+
+```zsh
+rg -n "AXList|kAXSizeAttribute|CFPreferences|tilesize|visibleFrame|minY|dockHeight" .
+```
+
+Une occurrence de preuve ou d’historique reste autorisée si elle est étiquetée
+comme telle. Une occurrence dans un calcul de layout doit renvoyer au token ou
+au résolveur. Si modifier la valeur mesurée exige plusieurs corrections, la
+décomposition HDA est ratée et se refait avant livraison.
+
+**La définition de « terminé ».** Une valeur système est correctement traitée
+seulement lorsque la source est nommée, la mesure est reproduite, l’unité et le
+repère sont écrits, le secours est distingué de la source primaire, le code
+centralise la valeur, le log montre la voie utilisée et une capture ou une
+observation indépendante confirme le résultat. Tant qu’un de ces éléments
+manque, la valeur reste non vérifiée.
+
+
+## 30 September 2026 : L'interface de paramètres d'un graphe est courte, 8 par catégorie au plus, et triée par priorité
+
+- 30 September 2026 (demande explicite de Matthieu, dictée et corrigée en grammaire seule) : il veut pouvoir TWEAKER lui-même les paramètres qui comptent pour coller à la référence, sans qu'on lui en donne des millions, sinon on ne sait plus itérer. La règle : **8 paramètres au maximum par catégorie**, les plus prioritaires d'abord, le reste reste DANS le graphe (constantes mesurées, tables). Trois catégories usuelles : motif (géométrie), couleur, rendu.
+- 30 September 2026 : où ils vivent : sur le **nœud maître du réseau**, comme paramètres spare dans un dossier par catégorie (`hda_pattern`, `hda_colour`, `hda_render`), et CHAQUE wrangle ou nœud les lit par `chf("<chemin du maître>/<nom>")` ou `ch("../nom")`. Une valeur se change en UN seul endroit, et tout suit (loi HDA ci-dessus). Les défauts reproduisent EXACTEMENT le résultat mesuré actuel : poser l'interface ne change aucun pixel.
+- 30 September 2026 : comment choisir les 8 : ceux qui, à la main, rapprochent le plus de la référence d'un seul geste (rayon et largeur des arcs, hauteur de paroi, largeur des lignes, force des lignes, gain des nuages, quantité de points, exposition de la lumière principale). Un paramètre qui n'a jamais besoin d'être touché ne sort pas. Ne jamais dépasser 8 par dossier : le code de fabrication (`make_controls`) le vérifie par un `assert`.
+- 30 September 2026 : les paramètres survivent à une reconstruction du graphe (le dossier n'est créé que s'il n'existe pas et les valeurs déjà modifiées sont conservées). Les décisions de conception restent des tables mesurées, pas des curseurs.
+- 30 September 2026 : implémentation de référence : `~/.claude/skills/zenray-houdini/templates/ceramic-tiles-height-v1/CeramicGreenParams.py` (liste `SPEC`, fonction `CH(nom)`, fonction `make_controls(reseau)`), 19 paramètres répartis en PATTERN 6, COLOUR 8, RENDER 5.
+- 30 September 2026 : pour une page HTML, l'équivalent est le panneau de curseurs du skill `zenray-html-photoshop-pdf-hda-socialmedia-shorts-reel` : mêmes limites par groupe, et il n'existe que si Matthieu demande les curseurs.
+
+- 30 September 2026 : le graphe, lui, est PROFOND : par défaut une itération d'affinage ajoute au moins 64 nodes de détail nommés (familles de 16, moyenne nulle, amplitudes branchées sur les 8 paramètres de la catégorie), règle de Matthieu écrite dans `skills/zenray-houdini/SKILL.md` (priorité 0). Interface courte, graphe profond.
+
+- 1 October 2026 : CORRECTION de la ligne du 30 September 2026 sur les 64 nodes par défaut : Matthieu l'a remplacée (graphe trop lourd, itérations de plus de 20 minutes). Le graphe d'un matériau reste sous 150 nodes, une famille de détails est UN wrangle fusionné, une couche n'est ajoutée que si elle change une carte de plus de 2/255 sur au moins 0,1 pour cent des pixels. Texte complet et mesures dans `skills/zenray-houdini/SKILL.md` (budget de nodes) et `Copernicus1.md`.
+
+- 1 October 2026 : PRECISION de la correction ci-dessus : la logique retenue par Matthieu est en deux phases. Phase 1 explorer, jusqu'à 64 nodes de détail pour atteindre vite le résultat visuel; phase 2 optimiser (fusion, élagage, rangement, preuve d'identité) avant de clore l'itération; budget de 150 nodes à la fin. Texte complet : `skills/zenray-houdini/SKILL.md`.
+
+## 02 October 2026 : Terme consacré : index mapping (ou mapping table)
+
+- 02 October 2026 (mots de Matthieu, dictée et corrigée en grammaire seule) : index mapping (ou mapping table) est tout à fait le terme consacré : il désigne précisément l'action ou la table servant à mapper un index ou identifiant unique (01) vers un jeu de données associées (var1, var2), faisant office de table de correspondance directe pour retrouver rapidement plusieurs attributs à partir d'un simple entier. (02 October 2026)
+- 02 October 2026 : dans tout code HDA ou architecture paramétrique, cette table de correspondance directe centralise les attributs mesurés pour chaque variante sans multiplier les paramètres exposés. (02 October 2026)
+
+## 12 October 2026 : Tout projet est un HDA réutilisable, itérable à la manière de HyperFrames (mots de Matthieu, 12 October 2026)
+
+- Ses mots (12 October 2026), dictée corrigée pour la grammaire seule : « chaque projet à l'avenir devra être un projet réutilisable avec une logique HDA (Houdini), donc le code, si possible, doit être réutilisable dans ce projet de motion design, ou au moins itérable, modifiable, évolutif et progressif, à la manière d'HyperFrames qui permet de faire du montage ». (12 October 2026)
+- Portée (12 October 2026) : la loi HDA du 15 August 2026 portait sur le code ; elle porte désormais sur le PROJET entier. Un projet livre une définition (le moteur, les gabarits), une interface de paramètres (fichiers de paramètres, jetons) et des instances versionnées, jamais un résultat figé qu'on refait de zéro. (12 October 2026)
+- Versions (12 October 2026) : chaque instance itère en versions numérotées sur trois chiffres, V_001 à V_999 (règle du tranchage : plus de 99 itérations sont probables). Une version ne s'écrase jamais ; la suivante part de la précédente et de ses paramètres. (12 October 2026)
+- Le modèle HyperFrames (12 October 2026) : une vidéo y est une composition HTML dont le rendu se recalcule depuis ses paramètres ; changer une durée, une couleur ou un texte remonte la vidéo sans la refaire. Tout projet vise cette propriété : modifier un paramètre et relancer, au lieu de reconstruire. (12 October 2026)
+- Le contrôle avant de livrer (12 October 2026) : un second projet du même type doit pouvoir partir du premier en changeant ses paramètres ; si ce n'est pas vrai, la définition n'a pas été extraite et le travail n'est pas fini. (12 October 2026)
+
+## 12 October 2026 : Tout ce que je crée est éditable par Matthieu, sans aller-retour (priorité 0, première ligne de CLAUDE.md)
+
+- Ses mots (12 October 2026), grammaire seule : « Quoi que ce soit que tu crées, il faut toujours faire en sorte que tout le code que tu crées soit éditable, modifiable, paramétrable à la manière d'un HDA (Houdini) ou d'une texture Substance Designer 3D, tu dois inclure lorsque possible des paramètres procéduraux qui permettent de modifier directement ton résultat avec une interface claire et la volonté de faire modifier les paramètres par moi-même sans back and forth. » (12 October 2026)
+- Portée (12 October 2026) : tout ce que je produis, code, outil, page, graphe Houdini, matériau, vidéo, document, script, lettre. La loi HDA du 15 August 2026 disait quoi construire ; celle-ci dit ce que « livrer » veut dire : le résultat ET sa façon d'être modifié par lui. (12 October 2026)
+- Le test (12 October 2026) : Matthieu doit pouvoir obtenir « un peu plus grand, un autre texte, une autre couleur, une autre durée » en changeant UNE valeur, sans me le demander. Un livrable figé accompagné de « dis-moi ce que tu veux changer » est un échec, au même rang que l'échec critique n° 1. (12 October 2026)
+- Les trois éléments, toujours ensemble (12 October 2026) : (1) des paramètres procéduraux, c'est-à-dire tout ce qui varie réellement (couleur, taille, quantité, seuil, graine, texte, durée) séparé de la définition ; (2) une interface claire : nom parlant, unité, plage, valeur par défaut égale au résultat livré, une ligne de description, 8 paramètres au plus par catégorie et les plus prioritaires d'abord (règle du 30 September 2026) ; (3) un mode d'emploi en une ligne : où on les change et comment on relance (bouton ou commande), jamais « demande-moi ». (12 October 2026)
+- La forme de l'interface suit le support (12 October 2026) : page ou outil web, panneau de curseurs avec « Copier les valeurs » ou fichier `_params.json` lisible ; graphe Houdini, paramètres spare sur le nœud maître lus par `chf()` ; Unreal, `UPROPERTY(EditAnywhere)` ou `UDataAsset` ; script, arguments nommés avec `--help` ou dataclass de configuration ; vidéo et motion design, fichier de paramètres plus commande de rendu ; lettre ou document, gabarit et variables. (12 October 2026)
+- Réconciliation avec les règles plus anciennes, dite pour qu'aucune ne contredise l'autre (12 October 2026) : (a) la règle « sur demande explicite de curseurs » de ZenRayProjects1.md garde son périmètre étroit, le serveur localhost de la vraie page avec son panneau d'atelier, qui ne part jamais en production ; mais l'EXISTENCE des paramètres et de leur interface n'attend plus une demande, elle est le défaut ; (b) la règle des deux occurrences continue de borner la liste : « lorsque possible » veut dire ce que Matthieu peut raisonnablement vouloir changer, jamais ce qui ne variera pas, et une interface bâtie pour un besoin imaginaire reste une faute. (12 October 2026)
+- Ce que cela m'interdit (12 October 2026) : cacher une valeur dans le code, poser « quelle valeur veux-tu ? » quand un paramètre avec un défaut suffit, livrer sans dire où se changent les paramètres. (12 October 2026)
+- Contrôle avant de livrer (12 October 2026) : changer une valeur se fait à un seul endroit ; le défaut reproduit exactement le résultat livré ; un paramètre sans valeur lève une erreur qui le nomme ; l'interface se comprend sans m'interroger. (12 October 2026)
+- Premier exemple (12 October 2026) : le mail « demander un retour » de ZenRay Freelance, dont chaque phrase vit dans `FEEDBACK_REQUEST`, que la page rend modifiable avec un bouton « Revenir au texte d'origine ». (12 October 2026)
+- Correction de la première ligne de CLAUDE.md (12 October 2026, à sa demande, car la version condensée perdait des nuances de son texte) : elle reprend désormais ses mots presque tels quels, grammaire et ponctuation seules corrigées (« la volonté de me faire modifier les paramètres par moi-même », virgules autour de « lorsque possible »), avec « Cette priorité passe en priorité zéro ». La version condensée du même jour est remplacée, pas supprimée de l'historique du journal. (12 October 2026)

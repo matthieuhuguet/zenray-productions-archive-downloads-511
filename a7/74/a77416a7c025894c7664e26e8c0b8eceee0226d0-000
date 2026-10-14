@@ -1,0 +1,140 @@
+# Rules index : what to load, and exactly when
+
+`~/.claude/CLAUDE.md` is read in full at the start of every session, and its weight counts against the
+65 536-byte startup context for subagent delegation. On 2026-09-15 it weighed 218 431 bytes and was
+being **silently truncated**, which is worse than a missing rule because nothing reports it.
+
+CLAUDE.md now carries the **concepts**. The 12 files below carry the **full text**, nothing
+summarised and nothing deleted, and they are loaded only when their subject comes up.
+
+> Ce fichier est **généré** par `skills/claude-md-global/scripts/build-rules-index.mjs`.
+> Il ne s'édite pas à la main : on modifie `triggers.json`, puis on régénère.
+
+## La règle de chargement, et elle prime sur l'économie de tokens
+
+**Mieux vaut charger un fichier pour rien que rater la doctrine qui gouverne la demande.** Lire deux
+fois le même fichier dans une session ne coûte presque rien ; répondre à côté de la doctrine coûte un
+aller-retour entier, et parfois une décision fausse. Donc dans le doute, on charge.
+
+Un **seul** terme du vocabulaire suffit à déclencher un fichier. Le vocabulaire est délibérément
+sur-inclusif : 1112 termes en français, en anglais, et dans les tournures que Matthieu emploie
+réellement.
+
+### Le routage se calcule, il ne se devine pas
+
+```bash
+node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<le texte de la demande>"
+```
+
+Il rend les fichiers à charger, par ordre de pertinence, avec les termes qui ont déclenché et les
+fichiers de mémoire de projet à ouvrir en même temps. Quand rien ne se déclenche il le dit, et le
+noyau de `CLAUDE.md` suffit alors.
+
+```bash
+node .../which-rule.mjs --all              # tous les fichiers et leur nombre de termes
+node .../which-rule.mjs --terms <fichier>  # le vocabulaire d'un fichier
+grep -n "<mot>" ~/.claude/rules/*.md       # les triggers sont aussi inscrits dans les fichiers
+```
+
+Le vocabulaire vit dans `~/.claude/rules/triggers.json` : c'est l'interface de paramètres, le script
+est la définition, aucun terme n'est écrit en dur dans le code.
+
+## Les 12 fichiers de doctrine
+
+| Fichier | Ce qu'il gouverne | Octets | Termes |
+|---|---|---|---|
+| `CardinalValues1.md` | Cardinal values, drive and self-doctrine | 39167 | 132 |
+| `Toolbox1.md` | Toolbox: measured settings, working commands and paid incidents | 38875 | 158 |
+| `ParametricHda1.md` | Every piece of code is an HDA - parametric law | 34636 | 121 |
+| `Tone1.md` | Tone, posture, prose style and answer protocol | 33357 | 104 |
+| `SkillsIndex1.md` | Auto-generated index of personal skills | 20885 | 10 |
+| `GameAndShipping1.md` | The game, Unreal and permanent shipping | 20136 | 68 |
+| `ZenRayProjects1.md` | ZenRay entities, Japan 2027 and the design workshop | 19887 | 66 |
+| `SilentBugs1.md` | Silent bugs: CSS ancestors, caches, swallowed error contracts | 17016 | 102 |
+| `Typography1.md` | Typography and visual design system | 14532 | 77 |
+| `JapaneseRules1.md` | Japanese rules and routing (the corpus itself lives in Memory1) | 8520 | 47 |
+| `ShowYourWork1.md` | Show your work: promotion, exposure, build in public | 6807 | 53 |
+| `SkillsAndMemory1.md` | Skills, long memory, progress journal and task continuity | 3451 | 174 |
+
+Total : 257269 octets de doctrine. `CLAUDE.md` est passé de 218 431 à 65425 octets.
+
+## Ce qui déclenche quoi, en clair
+
+Un extrait par fichier ; la liste complète est en tête de chaque fichier, entre `TRIGGERS:START` et
+`TRIGGERS:END`, et dans `triggers.json`.
+
+| Si la demande parle de… | Charger |
+|---|---|
+| report conditionnel, je publierai quand, je ferai quand, légitime, légitimité, pas assez bon, pas assez qualitatif, qualité suffisante, ça a du sens, quel sens… | `CardinalValues1.md` |
+| parallélisme, parallèle, cores, coeurs, cpu, xargs, make -j, multiprocessing, threads, batch… | `Toolbox1.md` |
+| hda, houdini digital asset, paramétrique, paramètre, paramètres, valeur en dur, hardcodé, littéral, magic number, constante… | `ParametricHda1.md` |
+| ton, style, manière de répondre, comment tu réponds, trop verbeux, trop long, sois bref, concis, concision, résume… | `Tone1.md` |
+| quel skill, liste des skills, skill existe, slash command, commande, outil disponible, est-ce qu'il y a un skill… | `SkillsIndex1.md` |
+| jeu, game, jeu vidéo, unreal, ue5, unreal engine, zenrayshards, zrs, devlog, gameplay… | `GameAndShipping1.md` |
+| zenray, zenraywebsite, zenraystudio, zenrayprogress, zenrayplan, zenraymedia, zenraycloud, matthieuhuguet.com, zenray.studio, store… | `ZenRayProjects1.md` |
+| css, ancêtre, parent, transform, filter, backdrop-filter, contain, will-change, position fixed, portail… | `SilentBugs1.md` |
+| police, polices, font, typographie, typo, intervariable, inter, anthropicserif, anthropicmono, hiragino… | `Typography1.md` |
+| japonais, japanese, nihongo, 日本語, kanji, kana, hiragana, katakana, grammaire japonaise, vocabulaire… | `JapaneseRules1.md` |
+| promotion, promouvoir, ads, publicité, sponsoriser, booster, organique, algorithme, vues, portée… | `ShowYourWork1.md` |
+| skill, skills, slash command, workflow, méthode, méthodologie, framework, protocole, routeur, index… | `SkillsAndMemory1.md` |
+
+## Le lien avec la mémoire de projet, `~/.claude/Memory1`
+
+Les deux corpus ne répondent pas à la même question et ne se remplacent jamais. **Les règles disent
+comment travailler**, la mémoire dit **ce que le projet sait**. Une demande sérieuse ouvre souvent les
+deux, et le routeur nomme les fichiers de mémoire liés à chaque doctrine.
+
+| Fichier de mémoire | Ce qu'il porte | Doctrine liée |
+|---|---|---|
+| `~/.claude/Memory1/Identity/Matthieu1.md` | identité, valeurs, objectifs, finances, santé, Japon, secrets, historique personnel : routeur matthieu-context | `CardinalValues1.md`, `Tone1.md`, `SkillsAndMemory1.md`, `ZenRayProjects1.md` |
+| `~/.claude/Memory1/Japanese/Japanese1.md` | corpus japonais append-only, leçons, kanji, vocabulaire : routeur japanese-context | `JapaneseRules1.md` |
+| `~/.claude/Memory1/ZenRayShards/ZenRayShards1.md` | le jeu, game design, Unreal, assets, prototypes : routeur zenrayshards-context ou zrs | `GameAndShipping1.md` |
+| `~/.claude/Memory1/Business/Business1.md` | business, revenus, offres, positionnement | `CardinalValues1.md`, `ZenRayProjects1.md`, `ShowYourWork1.md` |
+| `~/.claude/Memory1/Business/Freelance1.md` | missions freelance, prospection, tarifs, clients | `ZenRayProjects1.md` |
+| `~/.claude/Memory1/HealthSport/HealthSport1.md` | santé, sommeil, sport, charges, nutrition : routeur sante-sport-alimentation | `CardinalValues1.md` |
+| `~/.claude/Memory1/Design/Design1.md` | design, UI, feedbacks visuels durables | `Toolbox1.md`, `ParametricHda1.md`, `SilentBugs1.md`, `Typography1.md` |
+| `~/.claude/Memory1/Culture/Culture1.md` | culture, références, œuvres, Japon culturel | `JapaneseRules1.md` |
+| `~/.claude/Memory1/SocialMedia/SocialMedia1.md` | réseaux sociaux, formats, audience, publication | `ZenRayProjects1.md`, `ShowYourWork1.md` |
+| `~/.claude/Memory1/Houdini/Houdini1.md` | Houdini, procédural, HDA, Copernicus : routeur zenray-houdini | `ParametricHda1.md` |
+| `~/.claude/Memory1/Animation/Animation1.md` | animation, rig, mocap, cycles | `GameAndShipping1.md` |
+| `~/.claude/Memory1/AudioProductions/Audio1.md` | audio, musique, voix, traitement sonore | `Toolbox1.md` |
+| `~/.claude/Memory1/Storytelling/Storytelling1.md` | narration, écriture, structure de récit | `Tone1.md` |
+| `~/.claude/Memory1/Stock/Stock1.md` | stock, inventaire matériel et licences | `Toolbox1.md` |
+| `~/.claude/Memory1/Substance/Substance1.md` | Substance, texturing | `ParametricHda1.md` |
+| `~/.claude/Memory1/UnrealEngine/UnrealEngine1.md` | Unreal Engine, notes moteur | `GameAndShipping1.md` |
+| `~/.claude/Memory1/ZenRayProductions/LouisianaBayou/LouisianaBayou1.md` | scène Louisiana Bayou, composants | `GameAndShipping1.md` |
+| `~/.claude/Memory1/Mails/Mails1.md` | mails envoyés/reçus sauvegardés par Année/Mois/jour, index et scripts : lire l'index, charger seulement le fichier du jour utile, sinon MCP Gmail | `SkillsAndMemory1.md` |
+
+Trois d'entre eux sont volumineux et ne se lisent jamais en entier : `Identity/Matthieu1.md`
+(547 Ko), `Japanese/Japanese1.md` (491 Ko) et `ZenRayShards/ZenRayShards1.md` (138 Ko). Ils ont
+chacun leur skill routeur, `matthieu-context`, `japanese-context` et `zenrayshards-context`, qui
+trouvent la section utile sans charger le fichier.
+
+**Le cas japonais demande une vigilance particulière**, parce que deux fichiers se ressemblent sans
+porter la même chose. `rules/JapaneseRules1.md` porte les RÈGLES, la manière d'enseigner et de
+sauvegarder ; `Memory1/Japanese/Japanese1.md` porte la MATIÈRE, les leçons, les kanji, le vocabulaire
+et les jauges. On ne les confond pas et on n'écrit jamais l'un dans l'autre.
+
+La chronologie, elle, est ailleurs et reste unique : `~/.claude/PROGRESS.md`, écrite par le skill
+`progress`. Une connaissance durable va d'abord dans le bon `Memory1/**/<Nom>1.md`, puis l'entrée du
+journal cite ce chemin sans recopier le détail.
+
+## Les règles du système
+
+**Une règle nouvelle ne s'écrit jamais à deux endroits.** Si elle est de priorité 0 et tient en
+quelques lignes, elle va dans `CLAUDE.md` ; sinon dans le fichier de son sujet, et le noyau la
+mentionne en une phrase. Avant d'écrire, on cherche : la règle existe déjà une fois sur deux.
+
+**Quand une règle nouvelle entre, son vocabulaire entre avec elle** dans `triggers.json`, sinon elle
+ne se déclenchera jamais et le fichier deviendra un décor.
+
+**Les deux vérificateurs ferment le travail** :
+
+```bash
+node ~/.claude/skills/claude-md-global/scripts/extract-rules.mjs --verify      # poids et pointeurs
+node ~/.claude/skills/claude-md-global/scripts/build-rules-index.mjs           # régénère cet index
+```
+
+**Les miroirs suivent.** `~/.codex/AGENTS.md` et les quatre fichiers Gemini sont régénérés depuis
+`CLAUDE.md` par `mirror-agents.sh` ; ils héritent donc de l'allègement. Les fichiers de règles se
+lisent par leur chemin absolu depuis n'importe quel agent, Claude Code, Codex ou Antigravity.

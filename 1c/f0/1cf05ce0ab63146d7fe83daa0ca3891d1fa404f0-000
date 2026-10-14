@@ -1,0 +1,26 @@
+# Nom canonique du workflow Assets (historique)
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+## 9 October 2026 : Nom canonique du workflow Assets
+
+- Les consignes Assets datées du 2 au 5 October 2026 qui nomment `zenray-assets-v2` décrivent l’ancien nom ; pour tout nouveau travail, démarrage et reprise, appliquer `zenray-assets`. (9 October 2026)
+- `zenray-assets-v2` reste uniquement un alias de compatibilité pour les prompts historiques ; il ne contient aucune procédure ni moteur distinct. (9 October 2026)
+- L’identifiant de projet `zenray-assets-v2`, les archives cloud, mappings et sessions ne sont pas renommés. (9 October 2026)
+- Le feedback est intégré au démarrage de `zenray-assets` ; le writer partagé reste dans `zenray-feedback/scripts/feedback.py`. (9 October 2026)
+
+## 12 October 2026 : Les règles sont des feedbacks condensés, épinglés au projet (mots de Matthieu, 12 October 2026)
+
+- Ses mots (12 October 2026), grammaire seule : « j'aimerais retenir globalement ce concept de rules, car en soi les rules c'est simplement des feedbacks qui sont lisibles. » Le FEEDBACK.md d'un projet garde tout, prompts, essais et preuves, et une règle s'y noie ; Rules.md n'en garde que les leçons permanentes, une ligne chacune, et se charge seul. (12 October 2026)
+- Où : `/Users/zenray/.claude/Memory1/Projects/<id>/Rules.md`, créé pour chaque projet Assets (28 le 12 October 2026, 21 règles recopiées des FEEDBACK par `feedback.py promote all`), append only. (12 October 2026)
+- Écrire : `python3 ~/.claude/skills/zenray-feedback/scripts/feedback.py add <id> "<règle>" --kind rule` écrit le bloc dans FEEDBACK.md et la ligne dans Rules.md, une seule fois par événement. Une règle qui change reçoit une nouvelle ligne qui cite l'ancienne. (12 October 2026)
+- Charger : hook SessionStart de `~/.claude/settings.json` (`feedback.py hook`), qui trouve le projet dont une source enregistrée contient le dossier de la session ; sinon import `@/Users/zenray/.claude/Memory1/Projects/<id>/Rules.md` dans le CLAUDE.md du dépôt (fait pour ZenRayProgress : zenray-progress et zenray-assets-v2). Codex, Gemini et Antigravity : `feedback.py rules <id>` en début de travail. (12 October 2026)
+- Quand Matthieu donne un feedback « pour ne plus jamais faire l'erreur » : corriger, écrire la règle par `--kind rule`, et si possible un test qui échoue quand l'erreur revient, seule garantie qui ne s'oublie pas. Règle d'un projet dans son Rules.md, méthode dans le skill, règle valable partout dans ce CLAUDE.md global. (12 October 2026)
+
+## 10 October 2026 : Suppression du skill historique Assets (déplacé de CLAUDE.md le 12 October 2026, texte intégral)
+
+- Correction de la consigne du 9 October 2026 : zenray-assets-v2 n’est plus un skill ni un alias ; le seul point d’entrée est zenray-assets, et l’ancien nom ne doit pas être recréé. (10 October 2026)
+- L’identifiant de projet zenray-assets-v2, ses archives cloud, mappings et conversations ne sont pas renommés. (10 October 2026)
+- Le contenu opérationnel utile est conservé dans le skill zenray-assets, ses références et son historique ; la suppression des copies du skill ne supprime aucune donnée projet. (10 October 2026)

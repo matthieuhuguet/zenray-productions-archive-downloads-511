@@ -1,0 +1,302 @@
+---
+name: claude-md-global
+description: >-
+  Ouvrir la doctrine globale de Matthieu sans la charger en entier : CLAUDE.md porte les concepts, douze fichiers ~/.claude/rules/<Name>1.md portent le texte intégral, et un routeur calcule lesquels charger pour une demande donnée. Utiliser quand Matthieu dit « claude.md global », « les règles globales », « qu'est-ce que dit claude.md sur X », « relis la règle », « charge la doctrine », quand un doute porte sur la manière de travailler (ton, typographie, priorités, mémoire, parallélisme, valeurs), avant d'écrire une règle nouvelle pour vérifier qu'elle n'existe pas déjà, ou pour lier une doctrine à la mémoire de projet Memory1.
+---
+
+
+# La doctrine globale : la porte, pas le fichier
+
+## Ce qui a changé le 2026-09-15, et qu'il faut savoir avant tout le reste
+
+`CLAUDE.md` pesait **218 431 octets** et dépassait la limite de **65 536 octets** du contexte de
+délégation aux sous-agents : il était donc **tronqué en silence**, ce qui est pire qu'une règle
+absente puisque rien ne le signale. Il pèse désormais **50 320 octets**, avec 15 216 de marge, et ne
+porte plus que les concepts.
+
+Le texte intégral, rien de résumé ni de supprimé, vit dans **douze fichiers anglais**
+`~/.claude/rules/<Name>1.md`. Le contrôle d'intégrité a comparé le résultat à la sauvegarde : 88
+titres sur 88 et 1 841 lignes de contenu sur 1 841 retrouvés.
+
+| Fichier | Ce qu'il gouverne | Octets |
+|---|---|---|
+| `CardinalValues1.md` | doute, légitimité, report conditionnel, paliers, levier, objectifs, LifeOS, agency | 39 167 |
+| `Tone1.md` | ton, verbosité, prose française, récap, plan, clarification | 27 535 |
+| `Toolbox1.md` | parallélisme, encodage, CDN, quotas, git, scripts, déploiement, commandes | 26 586 |
+| `ParametricHda1.md` | loi HDA, valeur en dur, duplication, jetons, valeurs système | 23 562 |
+| `GameAndShipping1.md` | jeu, Unreal, devlog, tranche verticale, publier, périmètre | 20 136 |
+| `SkillsIndex1.md` | index auto-généré des skills personnels | 17 219 |
+| `SkillsAndMemory1.md` | skills, synchronisation, mémoire, PROGRESS.md, reprise | 16 591 |
+| `SilentBugs1.md` | bugs invisibles : ancêtres CSS, portails, thèmes, cache, erreur avalée | 14 179 |
+| `Typography1.md` | police, graisse, taille, webfont, icônes, jetons visuels, curseurs | 13 461 |
+| `ZenRayProjects1.md` | les trois entités ZenRay, domaines, Japon 2027, PVT, chantiers | 11 184 |
+| `JapaneseRules1.md` | règles japonaises : leçon, drill, sauvegarde. La matière est dans Memory1 | 8 145 |
+| `ShowYourWork1.md` | montrer son travail : promotion, ads, organique, audience, handles | 5 754 |
+
+## PRIORITÉ 0 : LE CHARGEMENT SE CALCULE, IL NE SE DEVINE PAS
+
+Devant toute demande sérieuse, **avant de répondre** :
+
+```bash
+node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<le texte de la demande>"
+```
+
+Il rend les fichiers de doctrine à charger, par ordre de pertinence, les termes qui ont déclenché, et
+les fichiers de mémoire de projet à ouvrir en même temps. Quand rien ne se déclenche, il le dit : le
+noyau de `CLAUDE.md` suffit alors.
+
+**Un seul terme suffit à déclencher un fichier**, et le vocabulaire est délibérément sur-inclusif,
+**829 termes** en français, en anglais et dans les tournures que Matthieu emploie réellement, y
+compris « je suis nul », « une fois sur deux », « tu me saoules » ou « c'est pas sorcier ».
+
+> **La règle qui prime sur l'économie de tokens** : mieux vaut charger un fichier pour rien que rater
+> la doctrine qui gouverne la demande. Lire deux fois le même fichier dans une session ne coûte
+> presque rien ; répondre à côté de la doctrine coûte un aller-retour entier, et parfois une décision
+> fausse. **Dans le doute, on charge.**
+
+```bash
+node .../which-rule.mjs --all              # tous les fichiers et leur nombre de termes
+node .../which-rule.mjs --terms <fichier>  # le vocabulaire complet d'un fichier
+grep -n "<mot>" ~/.claude/rules/*.md       # les triggers sont aussi inscrits dans les fichiers
+```
+
+Le vocabulaire vit dans `~/.claude/rules/triggers.json` et il est aussi inscrit en tête de chaque
+fichier, entre `TRIGGERS:START` et `TRIGGERS:END`, pour qu'un simple `grep` le trouve. Contrat HDA :
+le script est la définition, `triggers.json` son interface de paramètres, aucun terme n'est écrit en
+dur dans le code.
+
+**Quand une règle nouvelle entre, son vocabulaire entre avec elle.** Sans terme déclencheur, un
+fichier ne se charge jamais et devient un décor : on croit les règles actives alors qu'elles dorment.
+
+## Le lien avec la mémoire de projet, `~/.claude/Memory1`
+
+Les deux corpus ne répondent pas à la même question et ne se remplacent jamais. **Les règles disent
+COMMENT travailler, la mémoire dit ce que le PROJET sait.** Une demande sérieuse ouvre souvent les
+deux, et le routeur nomme les fichiers de mémoire liés à chaque doctrine.
+
+| Mémoire | Doctrine qui l'appelle |
+|---|---|
+| `Identity/Matthieu1.md` (547 Ko, routeur `matthieu-context`) | `CardinalValues1.md`, `Tone1.md`, `ZenRayProjects1.md`, `SkillsAndMemory1.md` |
+| `Japanese/Japanese1.md` (491 Ko, routeur `japanese-context`) | `JapaneseRules1.md` |
+| `ZenRayShards/ZenRayShards1.md` (138 Ko, routeur `zenrayshards-context`) | `GameAndShipping1.md` |
+| `Design/Design1.md` | `Typography1.md`, `SilentBugs1.md`, `ParametricHda1.md`, `Toolbox1.md` |
+| `Business/Business1.md`, `Business/Freelance1.md` | `CardinalValues1.md`, `ZenRayProjects1.md`, `ShowYourWork1.md` |
+| `HealthSport/HealthSport1.md` | `CardinalValues1.md` |
+| `SocialMedia/SocialMedia1.md` | `ShowYourWork1.md`, `ZenRayProjects1.md` |
+| `Houdini/Houdini1.md`, `Substance/Substance1.md` | `ParametricHda1.md` |
+| `Animation/Animation1.md`, `UnrealEngine/UnrealEngine1.md`, `ZenRayProductions/LouisianaBayou/LouisianaBayou1.md` | `GameAndShipping1.md` |
+| `Culture/Culture1.md` | `JapaneseRules1.md` |
+| `Storytelling/Storytelling1.md` | `Tone1.md` |
+| `Mails/Mails1.md` (index + un fichier par jour, `Année/Mois/Mails_<date>.md`) | `SkillsAndMemory1.md` |
+| `AudioProductions/Audio1.md`, `Stock/Stock1.md` | `Toolbox1.md` |
+
+**Le cas japonais demande une vigilance particulière**, parce que deux fichiers se ressemblent sans
+porter la même chose. `rules/JapaneseRules1.md` porte les RÈGLES, la manière d'enseigner et de
+sauvegarder ; `Memory1/Japanese/Japanese1.md` porte la MATIÈRE, les leçons, les kanji, le
+vocabulaire et les jauges. On ne les confond pas, et on n'écrit jamais l'un dans l'autre.
+
+Les trois gros fichiers ne se lisent **jamais** en entier : leurs skills routeurs trouvent la section
+utile. La chronologie est ailleurs et reste unique, `~/.claude/PROGRESS.md`, écrite par le skill
+`progress` ; une connaissance durable va d'abord dans le bon `Memory1/**/<Nom>1.md`, puis l'entrée du
+journal cite ce chemin sans recopier le détail.
+
+## Les chemins, une fois pour toutes
+
+```
+/Users/zenray/.claude/CLAUDE.md          les concepts, lus à chaque session
+/Users/zenray/.claude/rules/             les douze fichiers de doctrine + INDEX1.md + triggers.json
+/Users/zenray/.claude/Memory1/           la mémoire de projet, un <Nom>1.md par domaine
+/Users/zenray/.claude/PROGRESS.md        la chronologie unique, append only
+```
+
+`~/.codex/AGENTS.md` et les quatre fichiers Gemini sont **générés** depuis `CLAUDE.md` par
+`zsh ~/.claude/skills/skill-sync/scripts/mirror-agents.sh`, jamais édités ; ils héritent donc de
+l'allègement, et tiennent à 48 301 octets. Attention, ce script est en zsh et utilise `print` :
+lancé avec `bash`, il échoue à la ligne 12. Les skills, eux, sont partagés par lien symbolique,
+`~/.gemini/config/skills` pointant vers `~/.claude/skills`.
+
+## Contexte des mails : charger et décharger (2026-09-30)
+
+Les mails envoyés ou reçus qui comptent sont sauvegardés dans `~/.claude/Memory1/Mails/`, un fichier par
+jour : `<Année>/<MM-Month>/Mails_<YYYY-MM-DD>.md` (mois en anglais). L'index vit dans `Mails/Mails1.md`.
+
+- **Charger** quand Matthieu demande le contexte des mails : lire `Mails/Mails1.md` (le tableau seul),
+  puis ouvrir UNIQUEMENT le fichier du jour utile. Ne jamais lire tout le dossier.
+- **Décharger** dès que le sujet change : ne plus rien relire des mails, et ne pas les recopier ailleurs.
+- **Absent de l'index ?** Aller le lire directement par le MCP Gmail (`search_threads`, `get_message`
+  en `PLAIN_TEXT`), puis le sauvegarder :
+  `python3 ~/.claude/Memory1/Mails/Scripts/save_mail.py <mails.json>` (idempotent par id de message).
+- Le mail réellement ENVOYÉ fait foi, pas le brouillon : relire depuis `in:sent` avant de sauvegarder.
+- Un rebond (`mailer-daemon`, 550) s'inscrit dans le champ Status du mail concerné.
+
+## Décharger une section nouvelle
+
+Le script est la définition, `scripts/rules-plan.json` son interface de paramètres, chaque lot une
+instance. On essaie toujours à blanc d'abord.
+
+```bash
+node ~/.claude/skills/claude-md-global/scripts/extract-rules.mjs \
+  --plan ~/.claude/skills/claude-md-global/scripts/rules-plan.json --lot <id> --dry-run
+```
+
+Un lot nomme les titres **exacts** des sections à sortir, le fichier cible, et le **noyau** qui les
+remplace dans `CLAUDE.md`. Le noyau doit tenir seul : un agent qui ne lit que `CLAUDE.md` doit agir
+correctement sans le détail.
+
+## Le vérificateur ferme le travail
+
+```bash
+node ~/.claude/skills/claude-md-global/scripts/extract-rules.mjs --verify   # poids et pointeurs
+node ~/.claude/skills/claude-md-global/scripts/build-rules-index.mjs         # regenere rules/INDEX1.md
+```
+
+Il échoue aussi bien sur un dépassement de la limite que sur un pointeur vers un fichier absent, et il
+a été éprouvé dans les deux sens, rouge avant la décharge, vert après. À lancer après toute
+modification de `CLAUDE.md`, dans le même mouvement, comme un commit suit un correctif.
+
+## Un piège déjà payé, propre à ce système
+
+`update-skill-index.py` réinjectait **16 Ko** d'index des skills dans `CLAUDE.md` à chaque
+`sync-skill.sh`, et le fichier est effectivement repassé à 64 108 octets pendant le chantier. Le
+générateur écrit désormais dans `rules/SkillsIndex1.md`. Moralité générale : **tout script qui écrit
+dans `CLAUDE.md` doit être vérifié après une décharge**, sinon elle se défait toute seule et
+silencieusement.
+
+## Comment lire, selon le besoin
+
+**Doute sur la MANIÈRE de travailler** → `Tone1.md` et `CardinalValues1.md`, qui gouvernent quelle que
+soit la demande.
+
+**Question sur un SUJET précis** → passer par le routeur, puis lire le fichier qu'il nomme. Les
+sections de `CLAUDE.md` lui-même sont indexées par ligne dans [INDEX.md](INDEX.md), régénéré par
+`node ~/.claude/skills/claude-md-global/scripts/build-index.mjs` et vérifiable par son empreinte.
+
+**Avant d'ÉCRIRE une règle nouvelle** → chercher d'abord. La règle existe déjà une fois sur deux, et
+la bonne action est alors de compléter la section existante, jamais d'en ouvrir une seconde sur le
+même sujet. Si elle est de priorité 0 et tient en quelques lignes, elle va dans `CLAUDE.md` ; sinon
+dans le fichier de son sujet, avec son vocabulaire ajouté à `triggers.json`, et une phrase de renvoi
+dans le noyau.
+
+## Pourquoi un index plutôt qu'une lecture complète
+
+Un fichier de règles ne sert que s'il est lu. Passé une certaine taille il cesse d'être lu et devient
+un décor : on croit les règles actives alors qu'elles dorment. Pire encore, au-delà de 65 536 octets
+il était tronqué sans le dire. L'index rend la lecture PARTIELLE possible, donc la lecture tout court
+probable, et le routeur rend le bon choix automatique plutôt que dépendant de ma mémoire.
+
+## Erreurs déjà payées
+
+| Erreur | Ce qu'elle coûte | La parade |
+|---|---|---|
+| Laisser `CLAUDE.md` dépasser 65 536 octets | Il est tronqué en silence, et on croit les règles actives | `--verify` après toute modification |
+| Un script qui réécrit `CLAUDE.md` après la décharge | La décharge se défait sans un mot | Vérifier après chaque `sync-skill.sh` |
+| Une règle nouvelle sans vocabulaire déclencheur | Le fichier ne se charge jamais, la règle dort | Ajouter les termes à `triggers.json` dans le même mouvement |
+| Chercher une règle par `grep` sans lire sa section | On lit une phrase hors contexte et on applique l'inverse | Lire la section entière autour du résultat |
+| Écrire une règle sans chercher | Deux sections contradictoires, et personne ne sait laquelle vaut | Chercher dans l'index AVANT d'écrire |
+| Éditer `~/.codex/AGENTS.md` | L'édition est écrasée à la synchronisation suivante | N'éditer que `CLAUDE.md`, puis lancer le miroir |
+| Économiser un chargement par prudence de tokens | On répond à côté de la doctrine, ce qui coûte bien plus cher | Dans le doute, charger |
+
+## Projet disponible : google/woff2
+
+Le projet officiel [google/woff2](https://github.com/google/woff2) est installé localement dans
+`/Users/zenray/.claude/tmp/tmp-fonts/google-woff2`. Il fournit les exécutables
+`woff2_decompress`, `woff2_compress` et `woff2_info` pour convertir et inspecter des fontes WOFF2.
+Les trois commandes sont aussi accessibles directement dans le terminal par des liens installés dans
+`/Users/zenray/.local/bin`.
+
+Sur ce Mac, la compilation fiable passe par `xcrun --sdk macosx make -j16 all`. La commande `make`
+seule sélectionne le SDK des Command Line Tools 27.0, dont l'éditeur de liens échoue sur les
+architectures déclarées ; le SDK Xcode 26.5 utilisé par `xcrun` fonctionne.
+
+`woff2_decompress` produit toujours un fichier `.ttf`. Quand `woff2_info` indique le flavor `OTTO`,
+le contenu est une fonte OpenType CFF et le fichier doit être renommé en `.otf` avant installation.
+Les fontes utilisateur installées dans `/Users/zenray/Library/Fonts` sont ensuite reconnues par
+Font Book sans modifier les fontes système protégées.
+
+## Règle renforcée : chercher les valeurs système dans leur source de vérité
+
+Cette règle est la porte d’entrée vers la section complète du global
+`LES VALEURS SYSTÈME SE CHERCHENT AVANT DE SE DEVINER`. Elle s’applique dès
+qu’une valeur du code dépend de macOS, d’un réglage utilisateur, d’un écran,
+d’une permission, d’un runtime, d’un fichier de configuration ou d’une
+application externe.
+
+Un correctif ne choisit jamais une hauteur, une position, une marge, une taille
+de fenêtre ou une constante système à l’œil lorsqu’une API, une préférence ou
+un état runtime peut la fournir. Il cherche d’abord le propriétaire réel de la
+donnée, lit la valeur avec une commande ou une API locale, compare le résultat
+par une seconde voie indépendante, puis centralise la valeur dans le paramètre
+HDA du projet.
+
+L’incident qui fixe cette règle est Sleep Shutdown. Matthieu a dû insister pour
+que la hauteur du Dock soit vraiment cherchée. Les premières valeurs de widget
+étaient `96`, `80`, `72` puis `67` points. `visibleFrame.minY = 67` décrivait la
+zone réservée au Dock, mais pas la barre visible. La source Accessibility
+`AXList` a ensuite donné `61 pt`. La préférence native
+`com.apple.dock tilesize = 47`, augmentée du padding vertical mesuré de `14`,
+a fourni le repli `61 pt` quand l’application n’avait pas l’autorisation AX.
+
+Le mot-clé `AXList` devient donc un exemple de méthode, pas une valeur à
+recopier. Pour toute situation équivalente :
+
+1. nommer la donnée, son unité et son repère ;
+2. chercher l’API ou le fichier qui la possède réellement ;
+3. lire la donnée avant d’écrire le layout ;
+4. comparer la mesure à une observation indépendante ;
+5. distinguer la source primaire, le repli et l’estimation ;
+6. logguer la source utilisée ;
+7. centraliser la valeur dans un seul paramètre ;
+8. conserver la commande et la preuve dans le workflow concerné.
+
+Commandes de contrôle pour l’exemple Dock :
+
+```zsh
+defaults read com.apple.dock tilesize
+osascript -e 'tell application "System Events" to tell process "Dock" to get {role, position, size} of every UI element'
+```
+
+Une permission refusée ne signifie pas que la donnée n’existe pas. Une
+préférence absente ne signifie pas que la valeur vaut zéro. Une capture ne
+remplace pas l’API qui produit l’état. Si aucune source de vérité n’est
+trouvée, le résultat reste explicitement non vérifié : il ne se transforme pas
+en nombre plausible présenté comme une mesure.
+
+La règle vaut pour le code natif comme pour HTML et React. Un navigateur qui ne
+peut pas lire une préférence macOS reçoit une mesure native injectée ou un
+token de démonstration clairement nommé. Il ne reçoit pas une fausse fonction
+`getDockHeight()`.
+
+## 30 September 2026 : la date partout, en anglais, mois en toutes lettres
+
+- Toute règle ou tout ajout entre par une section au titre daté, et chaque ligne porte sa date au format `30 September 2026` (30 September 2026).
+- Texte intégral : `rules/SkillsAndMemory1.md`, section « La date partout » ; rappel court dans `CLAUDE.md` (30 September 2026).
+- Contrôle : `git diff -U0 -- <chemins> | grep '^+' | grep -v '^+++' | grep -vE '[0-9]{1,2} (January|February|March|April|May|June|July|August|September|October|November|December) 20[0-9]{2}'` doit être vide (30 September 2026).
+- Correction du format (30 September 2026, 11:51) : la première version écrivait `AAAA-MM-JJ` ; remplacée par l'anglais avec le mois en toutes lettres.
+
+## 30 September 2026 : deux règles ajoutées à la doctrine
+
+- 30 September 2026 : `rules/ParametricHda1.md`, section du 30 September 2026 : l'interface de paramètres d'un graphe est courte, 8 par catégorie au plus, portée par le nœud maître et lue par `chf()`/`ch()`.
+- 30 September 2026 : `rules/SkillsAndMemory1.md`, section du 30 September 2026 : un feedback s'écrit petit à petit dans `FEEDBACK.md` et n'entre dans le skill que lorsque Matthieu le valide (sauf les règles demandées expressément : mesures rangées, une image par version, 8 paramètres par catégorie).
+
+## 02 October 2026 : Terme consacré : index mapping (ou mapping table)
+
+- 02 October 2026 (mots de Matthieu, dictée et corrigée en grammaire seule) : index mapping (ou mapping table) est tout à fait le terme consacré : il désigne précisément l'action ou la table servant à mapper un index ou identifiant unique (01) vers un jeu de données associées (var1, var2), faisant office de table de correspondance directe pour retrouver rapidement plusieurs attributs à partir d'un simple entier. (02 October 2026)
+- 02 October 2026 : doctrine inscrite dans `rules/ParametricHda1.md` avec déclencheurs associés (`index mapping`, `mapping table`, `table de correspondance`, `lookup table`) dans `triggers.json`. (02 October 2026)
+
+## 5 October 2026 : Conversation liee au projet des le demarrage
+
+- Au debut de chaque conversation agentique, executer BeginConversation avec le vrai session-id, agent et project-id existant concerne ; lire ensuite context et le feedback canonique. SessionBindings.json est la liaison unique session/projet, jamais une inference par titre ni une nouvelle identite par prompt. Une discussion sans projet conserve sa collection Conversations ; toute ambiguite ou tentative de reattribution reste visible et refusee. (5 October 2026)
+- Chaque fiche projet expose ses discussions liees, titre, fournisseur et pastille Claude orange, Codex gris ou Gemini bleu, avec ouverture du lecteur natif et retour au meme projet. Le mapping et sa fiche de contexte recensent les identites de session et references du lecteur, sans recopier le transcript dans le global. Les originaux complets restent archives par le miroir ; le lecteur pagine les messages disponibles et signale les corps absents ou effaces. Une liaison ne prouve pas une archive complete ni un hook universel d hote. (5 October 2026)
+
+## Contenu public et outils internes (6 October 2026)
+
+- Dans les articles, posts, légendes et crédits publics, ne pas publier de mentions d’agents, d’automatisation agentique, de Claude Code, Codex, Gemini, LLM, AI ou IA, ni le fonctionnement interne des prompts, bridges, files de commandes ou mémoires partagées, sauf demande explicite ultérieure de Matthieu pour le sujet concerné. Ces informations restent dans le suivi privé. (6 October 2026)
+- Écrire sur le travail artistique et technique vérifié, ses choix, résultats et limites. Ne pas inventer de vécu, d’effort manuel, de jugement personnel ou d’auteur pour remplacer une mention supprimée. Garder une formulation factuelle et naturelle ; retirer les considérations internes qui ne servent pas le lecteur. (6 October 2026)
+- Avant publication, vérifier tout le contenu visible et ses métadonnées, les tableaux, légendes et figures. Pour le lys, ArticleLily/Check.py refuse les mentions internes et son selftest prouve le refus. (6 October 2026)
+
+## 10 October 2026 : index de la méthodologie, enregistré à quatre endroits
+
+- 10 October 2026 : `~/.claude/CLAUDE.md` porte une section courte qui pointe vers le skill `zenray-methodology`, lequel porte la procédure complète (10 October 2026).
+- 10 October 2026 : le vocabulaire déclencheur (itérer, tourne en rond, piétine, bonne méthode, seize méthodes, masques noir et blanc, capture annotée, pivoter, trouver N) entre dans `rules/triggers.json` sous `SkillsAndMemory1.md`. La tête de ce fichier est régénérée depuis ce JSON, et `which-rule.mjs` le renvoie pour ces demandes (10 October 2026).
+- 10 October 2026 : `~/.claude/skills/zenray-houdini/SKILL.md` reçoit un renvoi en tête de sa section PRIORITÉ 0 (10 October 2026).
+- 10 October 2026 : `rules/SkillsIndex1.md` liste le skill automatiquement à chaque `sync-skill.sh`, par `update-skill-index.py` (10 October 2026).

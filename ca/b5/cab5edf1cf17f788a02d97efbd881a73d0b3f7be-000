@@ -1,0 +1,80 @@
+# Montrer son travail : promotion, exposition, atelier ouvert
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Promotion, exposure and build in public.
+>
+> **Vocabulaire déclencheur (53 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> promotion · promouvoir · ads · publicité · sponsoriser · booster · organique · algorithme · vues · portée · reach · audience · abonnés · followers · instagram · tiktok · youtube · shorts · reels · linkedin · x · twitter · bluesky · post · publier · publication · hashtag · carrousel · thumbnail · vignette · build in public · atelier ouvert · devlog · studio · portfolio · candidature · réseau · networking · handle · @zenray · identifiant · profil · bio · paid promotion · boost · organic reach · distribution · audience · build in public · social post · hashtag · thumbnail · handle
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/SocialMedia/SocialMedia1.md`
+> - `~/.claude/Memory1/Business/Business1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## PRIORITÉ 0 — ON PROMEUT TOUJOURS SES PROPRES CONTENUS, LE MYTHE DE L'ORGANIQUE (2026-08-21)
+
+**Le 1 % des chaînes les plus puissantes aux États-Unis fait 60 % de ses vues grâce aux ads**, et 40 %
+seulement en organique. Les mots de Matthieu : « Pendant qu'en France, on dit fièrement : *moi c'est
+que de l'organique*. »
+
+Ce chiffre démonte une croyance coûteuse. L'organique pur n'est pas une preuve de mérite, c'est une
+contrainte qu'on s'impose et qu'on rebaptise vertu. Les créateurs qui semblent avoir percé
+naturellement achètent la première vue, et c'est elle qui déclenche le reste : une plateforme n'a
+aucun moyen de savoir qu'un contenu est bon avant que quelqu'un ne l'ait regardé. Payer l'amorçage ne
+triche pas, cela fournit au système la donnée qu'il attend pour travailler.
+
+**La règle.** Un contenu publié n'est pas fini ; il est fini quand il a été **promu**. Publier puis
+attendre revient à confier la distribution au hasard, et le hasard ne distribue rien. Vaut pour
+Instagram, les Reels, TikTok, les Shorts, un article du site, une page de vente, et le jour venu la
+page Steam de ZenRayShards.
+
+**Ce que cela m'interdit.** Traiter un post comme terminé au moment où il est en ligne. Rendre un plan
+de publication sans sa ligne de promotion. Et laisser croire qu'un bon contenu se suffit : la qualité
+décide si l'audience RESTE, jamais si elle arrive.
+
+**Le lien avec le reste.** C'est la formule qu'il a écrite lui-même le 11 août, **Volume × Exposition
+× Feedback** : la promotion est le multiplicateur d'exposition, et sans elle les deux autres termes
+tournent à vide. Détail et graphique : `SocialMedia/SocialMedia1.md`, entrée du 2026-08-21.
+
+### BUILD IN PUBLIC : L'ATELIER OUVERT, SANS COSTUME DE FONDATEUR (2026-09-01)
+
+Matthieu retient la fonction du *build in public*, l'exposition régulière d'un travail réel, mais il
+rejette son esthétique commerciale américaine : aucun personnage de fondateur, aucun récit fabriqué,
+aucun tableau de revenus exhibé pour produire de l'attention. Le nom utile en français est **l'atelier
+ouvert**. On entrouvre la porte pendant que l'œuvre se construit, afin que joueurs, pairs et studios
+voient les choix, les essais et les résultats.
+
+**La règle.** La publication ne devient jamais un second métier posé à côté du jeu. Elle se prélève sur
+ce qui existe déjà : une capture, quinze secondes jouables, un personnage à un stade précis, un essai
+raté puis corrigé, un problème technique et sa preuve de résolution. Un même fragment peut servir le
+devlog, le portfolio, la conversation avec un studio et la preuve commerciale. S'il faut fabriquer un
+contenu séparé pour raconter le travail, la méthode a créé une dette et doit être simplifiée.
+
+**Parler aux studios sans costume corporate.** Un track record ne précède pas nécessairement la
+conversation : il se forme par l'accumulation de preuves datées que la conversation rend visibles.
+Matthieu n'a donc pas à prétendre posséder un produit extraordinaire ni à écrire comme une entreprise.
+Il montre un objet précis, nomme le problème qu'il vient de résoudre et demande un retour concret. Le
+message porte une chose visible et une seule question ; il ne porte ni candidature vague, ni demande de
+validation personnelle, ni longue présentation.
+
+**Le contrôle.** Chaque semaine, au moins une preuve publique rejoint un destinataire réel, et au moins
+une personne susceptible de jouer, acheter, collaborer ou recommander peut répondre. Cette règle ne
+crée aucune cadence concurrente : elle donne une fonction commerciale, relationnelle et artistique aux
+publications déjà exigées par la production permanente. Les éléments confidentiels d'un client ou d'un
+projet privé restent fermés.
+
+**Identifiant et signature publique (2026-09-07).** Le nom affiché en tête de profil reste `ZenRay` (en gras, libre partout). L'identifiant (@handle) officiel est `@zenray.st` pour les plateformes avec point médian (Instagram, Bluesky) et `@zenrayst` pour les plateformes sans point (YouTube, TikTok, GitHub, X), en remplacement définitif de `zenrayhm` et `@mhzenray`. La source de vérité d'identité reste `Identity/Matthieu1.md`.
+
+## Contenu public et outils internes (6 October 2026)
+
+- Dans les articles, posts, légendes et crédits publics, ne pas publier de mentions d’agents, d’automatisation agentique, de Claude Code, Codex, Gemini, LLM, AI ou IA, ni le fonctionnement interne des prompts, bridges, files de commandes ou mémoires partagées, sauf demande explicite ultérieure de Matthieu pour le sujet concerné. Ces informations restent dans le suivi privé. (6 October 2026)
+- Écrire sur le travail artistique et technique vérifié, ses choix, résultats et limites. Ne pas inventer de vécu, d’effort manuel, de jugement personnel ou d’auteur pour remplacer une mention supprimée. Garder une formulation factuelle et naturelle ; retirer les considérations internes qui ne servent pas le lecteur. (6 October 2026)
+- Avant publication, vérifier tout le contenu visible et ses métadonnées, les tableaux, légendes et figures. Pour le lys, ArticleLily/Check.py refuse les mentions internes et son selftest prouve le refus. (6 October 2026)

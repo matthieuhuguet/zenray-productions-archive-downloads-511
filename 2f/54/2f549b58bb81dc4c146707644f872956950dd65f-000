@@ -1,0 +1,195 @@
+# Les bugs qui ne se voient pas : ancêtres CSS, caches, erreurs avalées
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Frontend, cache and error-contract pitfalls already paid for.
+>
+> **Vocabulaire déclencheur (78 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> css · ancêtre · parent · transform · filter · backdrop-filter · contain · will-change · position fixed · portail · portal · z-index · stacking context · hors écran · mal placé · thème · dark mode · verre · glass · translucide · flou · blur · box-sizing · padding · max-height · déborde · overflow · cache · mise en cache · memo · mémoïsation · globalthis · worker · isolate · périmé · stale · 404 · transitoire · course · race · null · undefined · sentinelle · lecture écriture · forke · doublon · primitive · helper · catch · throw · erreur avalée · silencieux · appelants · symptôme · aléatoire · une fois sur deux · clignote · une seconde puis · vite build · bundle · index.html · déploiement bloqué · containing block · backdrop filter · portal · stacking context · theme class · cache poisoning · stale cache · transient failure · race condition · read modify write · error contract · swallowed error · flaky · intermittent · hydration · bundle entry
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/Design/Design1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## PRIORITÉ 0 : UN ANCÊTRE QUI FILTRE CHANGE LES RÈGLES DE TOUS SES DESCENDANTS (2026-08-27)
+
+Trois heures perdues sur trois incidents distincts, et une seule cause de
+famille : en CSS, certaines propriétés posées sur un PARENT redéfinissent
+silencieusement le repère de ses enfants. Rien ne casse, rien ne s'affiche en
+rouge, l'élément se contente de ne pas être là où on le croit ou de ne pas avoir
+la couleur qu'on lui a donnée. C'est exactement le genre de défaut qu'on
+attribue à sa propre règle alors qu'il vient d'ailleurs.
+
+**Les trois pièges, tous payés sur ZenRayProgress.**
+
+Un ancêtre portant `transform`, `filter`, `backdrop-filter`, `perspective`,
+`contain` ou `will-change` devient le **bloc conteneur** de tout `position:
+fixed` descendant. Un panneau censé se poser sur la fenêtre s'ancre alors au
+cadre : mesuré à 2 879 pixels du haut, entièrement hors écran, sur la vue
+japonaise. La parade est un portail vers `document.body`.
+
+Un ancêtre portant `backdrop-filter` devient une **racine de fond**. Le
+`backdrop-filter` d'un descendant n'a plus rien à flouter, si bien qu'un verre
+translucide y devient une simple vitre : on voit le contenu au travers, net.
+Même parade, sortir l'élément par un portail.
+
+Un portail vers `document.body` sort du conteneur qui porte la **classe de
+thème**. Les jetons sombres se déclarant sous cette classe, l'élément porté
+résout les jetons CLAIRS et rend un verre blanc au milieu d'une application
+sombre. Un portail se reconstitue donc en ENTIER : classe de thème, classe de
+composant, et variables en ligne. Reconstituer à moitié est pire que ne rien
+faire, parce que le défaut ne se voit que dans un thème sur deux.
+
+**Un quatrième, qui n'est pas une affaire d'ancêtre mais se paie de la même
+façon :** `max-height` et `width` s'appliquent à la boîte de CONTENU tant qu'on
+est en `content-box`, si bien qu'une marge intérieure s'ajoute par-dessus le
+plafond qu'on vient de poser. Une feuille déclarée à 880 pixels en mesurait 956,
+un popover plafonné débordait encore de 14 pixels. `box-sizing: border-box`.
+
+**La règle de vérification, et c'est elle qui vaut le plus.** Devant un élément
+qui n'est pas où on l'a mis, ou qui n'a pas la couleur qu'on lui a donnée,
+REMONTER LA CHAÎNE DES ANCÊTRES avant de retoucher sa propre règle. En une
+commande dans la console : parcourir les parents et relever `transform`,
+`filter`, `backdrop-filter`, `contain` et la classe de thème. La cause y est
+presque toujours, et elle ne se devine pas depuis la règle de l'enfant.
+
+### Où cette loi s'applique déjà
+
+Le skill `zenray-html-photoshop-pdf-hda-socialmedia` en porte l'application visuelle complète, avec
+un cas concret monté de bout en bout, `~/.claude/tmp/tmp-graphic1`, où trois
+gabarits produisent vingt-six assets. Ce skill est l'illustration, la présente
+bannière est la loi, et c'est elle qui fait foi en cas de divergence.
+
+**Le Registre des 1000+ Designs et propositions paramétriques (2026-09-05)** : toute proposition de design dérive de gabarits existants dans `templates/designs/` ou déclenche la question explicite : « On part sur plusieurs propositions depuis les mockups avec des sliders et plusieurs designs ? Et des valeurs paramétriques en mode HDA sliders ? ». Chaque design porte un `<nom-parlant>` répertorié dans `index.json` (ex: `luxe-epure`, `pure-pill-liquid-glass`) pour interdire le gaspillage de tokens et permettre la sélection atomique avant déploiement.
+
+## LE SYMPTÔME EST L'INDICE DÉCISIF — lire le code EN CIBLANT, jamais en auditant tout (2026-07-22)
+
+Un audit exhaustif alors que la feature existe déjà brûle des tokens pour rien. La bonne méthode : **partir du symptôme précis décrit par Matthieu et remonter au seul endroit qui peut le produire**. Le symptôme contient presque toujours la réponse — il faut savoir le lire.
+
+Exemples réels payés sur ZenRayProgress :
+- « **seule la pochette s'update** » → l'écriture marchait, c'est la RELECTURE qui était fausse (cache CDN raw ~5 min).
+- « ça marche **pendant 1 seconde** puis plus rien » → ce n'est pas le rendu initial qui est cassé, c'est ce qui l'ÉCRASE juste après (effet async, autosave, remontage).
+- « ça clignote **au survol** » → composant défini EN LIGNE (remonté à chaque render) ou règle :hover sur un toggle, jamais l'image.
+- « **aléatoire** / avec latence » → un cache ou une course, jamais une erreur de logique pure.
+
+Règle : formuler l'hypothèse que le symptôme impose, la vérifier par UN grep ciblé, corriger, builder.
+
+**LA LIMITE DE CETTE RÈGLE, payée le 2026-07-31 :** une recherche ciblée ne fait JAMAIS remonter une
+règle qu'on ne sait pas chercher. J'ai passé une session entière à greper le CLAUDE.md d'un projet sans
+jamais lire ses quinze premières lignes, et j'y ai violé un interdit qui y figurait dès la ligne 5.
+Cibler vaut pour le CODE, qui est vaste ; les INSTRUCTIONS, elles, se lisent en entier une fois au
+début de session, elles tiennent en une page et ce sont elles qui disent ce qu'on n'a pas le droit de
+faire.
+ Coder séquentiellement, une cause à la fois. Ne jamais lire 3000 lignes « pour voir ».
+
+## PRIORITÉ 0 : UN ÉCHEC TRANSITOIRE NE SE MET JAMAIS EN CACHE, ET CHANGER UNE PRIMITIVE PARTAGÉE CASSE SES APPELANTS (2026-08-31)
+
+Deux jours sur ZenRayProgress, cinquante-quatre correctifs, et une même faute revenue QUATRE fois
+sous quatre masques. Elle mérite une loi, parce qu'elle ne se voit jamais sur le moment : elle se
+paie plus tard, sous forme d'un symptôme stable qu'on attribue à la donnée alors qu'il vient du cache.
+
+### La loi du cache : distinguer l'absence confirmée de l'échec passager
+
+Un cache partagé ne doit JAMAIS mémoriser autre chose qu'une réponse DÉFINITIVE. Trois valeurs
+seulement ont le droit d'y entrer : un résultat valide, ou une absence que le serveur a confirmée, ou
+rien. Un échec de réseau, un quota épuisé, une course entre deux tuiles, une limite de connexions du
+navigateur : tout cela est TRANSITOIRE, et le mémoriser fige le symptôme pour toute la session, là où
+la cause a duré une fraction de seconde.
+
+Le piège tient à ce que l'échec transitoire et l'absence réelle ont la même forme en sortie, souvent
+`null`. Il faut donc les SÉPARER explicitement, par un sentinelle distinct : `undefined` pour le
+transitoire qu'on n'écrit pas et qu'on réessaie, `null` pour l'absence confirmée qu'on écrit. Un code
+qui rend `null` dans les deux cas empoisonne son cache au premier hoquet.
+
+Les quatre occurrences, toutes du même jour, pour graver le motif : une résolution de lien mémorisée
+dans `globalThis` survivait entre deux requêtes d'un Worker Cloudflare, si bien qu'un dossier créé
+paraissait ne pas exister ; un hook mémorisait un `null` transitoire et la vignette restait grise ;
+un préchargement rangeait dans le cache PARTAGÉ le manifeste d'un raccourci NON RÉSOLU, et la tuile
+affichait ensuite ce raccourci au lieu de l'image ; une mémoire de sonde survivait à la requête. La
+frontière nette qui trompait le diagnostic, une image sur deux, venait toujours de l'ordre de
+chargement, stable d'un rechargement à l'autre, jamais de la donnée.
+
+Corollaire pour tout isolate réutilisé entre requêtes, Cloudflare Workers en tête : une mémoïsation
+qui n'a de sens QUE dans une requête se vide au début de chaque invocation. `globalThis` n'est pas un
+cache de requête, c'est un cache de PROCESSUS, et il ment dès que l'état change entre deux appels.
+
+### Le corollaire d'amont : une lecture qu'on va RÉÉCRIRE ne passe jamais par un cache (2026-09-05)
+
+La loi ci-dessus protège ce qu'on écrit DANS un cache. Celle-ci protège ce qu'on lit DEPUIS un cache,
+et les deux se paient le même jour sur ZenRayProgress, à deux endroits différents du même tri.
+
+Un cache de lecture rend deux services au prix d'un seul risque : il répond vite et il ne coûte rien,
+mais il répond **ce qui était vrai il y a quelques minutes**. Tant que la réponse sert à AFFICHER,
+c'est un excellent marché. Dès qu'elle sert à une lecture-modification-écriture, c'est une bombe :
+l'écriture repart d'un état périmé et **forke la donnée en silence**, sans erreur, sans 404, sans
+rien qui distingue une vieille réponse d'une réponse fraîche.
+
+Les deux formes que prend le mensonge, et il faut les nommer séparément parce qu'on ne s'en protège
+pas de la même façon. Le **404 sur du neuf** : le fichier existe, le cache ne l'a pas encore vu, et
+un code qui traite 404 comme une réponse définitive conclut à une absence. Le **200 périmé sur du
+réécrit** : plus sournois, puisque tout paraît normal, et c'est lui qui a fait frapper une seconde
+identité à une image déjà triée, écrasant la première.
+
+**La règle.** Toute lecture destinée à être modifiée puis réécrite passe par la source immédiatement
+cohérente, jamais par son cache ni par son CDN. Les lectures d'affichage, elles, restent sur le
+chemin gratuit. Quand le doute porte sur une absence, on ne conclut jamais depuis le seul cache : on
+fait confirmer par la source, et seulement dans ce cas, ce qui garde le coût nul dans le cas normal.
+
+**Le signal qui doit alerter :** je m'apprête à écrire un fichier dont je viens de lire le contenu par
+un chemin choisi pour sa gratuité ou sa vitesse. C'est exactement là que la donnée se dédouble.
+
+### La loi du contrat : changer les erreurs d'une primitive casse tous ses appelants en silence
+
+Rendre une fonction partagée LEVANTE alors qu'elle rendait une valeur casse le contrat implicite de
+chacun de ses appelants, sans une erreur de compilation, sans un test rouge s'ils ne sont pas
+couverts. Le cas payé : faire lever `apiPost` a transformé une vingtaine de `.catch(() => null)`, qui
+n'attrapaient qu'une panne réseau, en avaleurs d'échec serveur. Résultat vu par Matthieu, « 0 déplacé,
+1 échec » sans la moindre cause, et pire encore, une corbeille qui supprimait après une copie ratée.
+
+La règle : avant de changer la sémantique d'erreur d'une primitive partagée, on `grep` TOUS ses
+appelants et on décide, un par un, ce que chacun doit faire du nouveau mode d'échec. Un helper qui
+rend la cause plutôt que de l'avaler, `causeApi`, vaut mieux qu'un `catch` muet reproduit partout.
+
+### Ce que ces deux lois exigent du vérificateur
+
+Un vérificateur qui ne visite que le chemin le moins cher ne prouve rien, et il rassure, ce qui est
+pire. Deux fois le même jour : un test de budget qui ne mesurait que le chemin d'ÉCHEC, moins coûteux
+que le succès qui, lui, tue le Worker ; un banc de mesure qui annonçait « atteint » parce que sa
+médiane rendait `-1` sur un échec total. Donc toujours tester le chemin de SUCCÈS, et toujours dans
+les DEUX sens, rouge sur l'ancien code et vert sur le nouveau, sinon le test n'a jamais regardé le
+fichier.
+
+### Le réflexe qui aurait fait gagner une journée
+
+Quand la donnée « paraît » cassée pour certains éléments et pas pour d'autres voisins identiques, le
+bug est presque toujours EN AVAL de la donnée, dans le cache, la course ou l'affichage, jamais dans la
+donnée elle-même. La preuve se lit dans les octets réels, pas dans l'interface : sur ce projet, lire
+directement le dépôt privé par `gh api` a prouvé en trois commandes que deux images, une verte et une
+orange, avaient un lien, un registre et une source strictement identiques. Ce constat a déplacé la
+recherche du bon côté et clos une piste qui aurait pu durer des heures. Et le symptôme se lit dans le
+CODE avant d'être interprété : la pastille orange n'était pas « introuvable » mais « provenance hors
+CDN », ce qu'un coup d'oeil à la ligne qui la dessine disait tout de suite.
+
+### Un piège de déploiement, propre à vite et aux hébergeurs de statique
+
+Vérifier qu'un build est en ligne se fait par le POINT D'ENTRÉE que référence `index.html`, jamais par
+`ls dist/assets/index-*.js | head -1`. Vite conserve plusieurs bundles `index-*.js` entre deux builds,
+et le premier par ordre alphabétique n'est pas l'entrée. J'ai cru une prod bloquée pendant plusieurs
+minutes alors qu'elle servait le bon fichier : je comparais le mauvais.
+
+
+## 5 October 2026 : AUCUNE RÉGRESSION, UN DÉPLOIEMENT NE PART QUE DE LA BRANCHE PARTAGÉE, ET SE VÉRIFIE SUR LES DONNÉES (5 October 2026)
+
+- 5 October 2026 : l'incident. ZenRay Freelance affichait « 0 à contacter » alors que le store en contenait 381. Cause mesurée : mes commits vivaient sur la branche `freelance-engine` (fusionnée seulement dans le `main` LOCAL du dépôt), pendant que `origin/main` avançait de 20 commits par une autre session. Cette session a redéployé le site depuis ses propres sources : l'ancienne page (sans les gardes contre une liste vide) et l'ancien code serveur (sans la lecture par blob des fichiers de plus d'1 Mio) sont revenus en production, et le store de 1,06 Mo se lisait vide. (5 October 2026)
+- 5 October 2026 : règle 1, **un déploiement n'est de confiance que s'il part d'`origin/main` à jour**. Avant de déployer : `git fetch`, puis `git merge-base --is-ancestor <mon dernier commit> origin/main` doit réussir. Sinon on fusionne la branche dans `main`, on pousse `main`, et seulement ensuite on construit et on déploie. Jamais de déploiement depuis une branche latérale ou un worktree en avance sur `main`. (5 October 2026)
+- 5 October 2026 : règle 2, **un site partagé entre plusieurs sessions se re-vérifie après coup**. Une autre session peut déployer cinq minutes plus tard. La preuve d'un déploiement est donc double : le morceau de page servi correspond octet pour octet à mon build, et une relecture dix minutes après donne encore la même chose. (5 October 2026)
+- 5 October 2026 : règle 3, **la vérification porte sur les DONNÉES, pas seulement sur le code**. Un contrôle de production relit le fichier de données par l'API réelle et exige un nombre d'éléments plausible (jamais 0, jamais moins que la veille), ainsi qu'un texte repère de la dernière version de la page. Script de référence : `ZenRayProgress/scripts/Freelance/CheckProduction.mjs`. Un « 0 élément » est un signal d'alarme, jamais une réponse. (5 October 2026)
+- 5 October 2026 : règle 4, **ce qu'on a livré ne disparaît pas par un redéploiement d'autrui** : toute correction de production s'écrit dans un test qui échoue si la correction saute (l'API rend le gros fichier, la page refuse une liste vide), et vit dans `main`. Une fonctionnalité qui n'est que sur une branche n'existe pas. (5 October 2026)
+- 5 October 2026 : règle 5, **les dépôts locaux se corrompent sous concurrence** (objets Git manquants quand deux sessions font un `gc` ou un fetch en même temps). On commit avec `-c gc.auto=0 -c maintenance.auto=false`, on pousse tout de suite, et en cas d'objet manquant on repart d'un clone neuf plutôt que de réparer à la main. Le clone complet de ZenRayProgress pèse plus de 1,8 Go : préférer `--filter=blob:none`. (5 October 2026)

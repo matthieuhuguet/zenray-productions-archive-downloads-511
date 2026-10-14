@@ -1,0 +1,117 @@
+# Les règles japonaises (la matière, elle, vit dans Memory1)
+
+> Extrait de `~/.claude/CLAUDE.md` le 2026-09-15 pour tenir sous la limite de 65536 octets
+> du contexte de démarrage des sous-agents. Le texte est intégral, rien n'a été résumé.
+> Le noyau de ces règles reste dans `CLAUDE.md`, qui pointe ici.
+
+> **À ne pas confondre.** Ce fichier porte les RÈGLES, c'est-à-dire la manière d'enseigner et de
+> sauvegarder. La MATIÈRE, leçons, kanji, vocabulaire, jauges, vit dans
+> `~/.claude/Memory1/Japanese/Japanese1.md`, ouvert par le routeur `japanese-context`, et les
+> règles opérationnelles détaillées dans le skill `zenray-learn-japanese`.
+
+<!-- TRIGGERS:START -->
+> **Charger ce fichier dès que la demande touche :** Japanese learning - banners and routing.
+>
+> **Vocabulaire déclencheur (46 termes), volontairement sur-inclusif.** Mieux vaut le
+> charger pour rien que rater la doctrine qui gouverne la demande. Un seul terme suffit.
+>
+> japonais · japanese · nihongo · 日本語 · kanji · kana · hiragana · katakana · grammaire japonaise · vocabulaire · jlpt · n5 · n4 · n3 · n2 · n1 · leçon · boucle · drill · srs · révision · conversation · parler · oser parler · japonaise · tokyo · culture japonaise · politesse · keigo · traduire · lecture · carte de restaurant · menu · furigana · tracé · stroke order · 書き順 · boucle 15/2 · quinze minutes · japanese · jlpt · kanji · stroke order · vocabulary drill · spaced repetition · conversation practice
+>
+> **Mémoire de projet à ouvrir en même temps :**
+> - `~/.claude/Memory1/Japanese/Japanese1.md`
+> - `~/.claude/Memory1/Culture/Culture1.md`
+>
+> Routage automatique : `node ~/.claude/skills/claude-md-global/scripts/which-rule.mjs "<la demande>"`
+<!-- TRIGGERS:END -->
+
+## TEMPLATE DE LEÇON VALIDÉ (PRIORITÉ 0, 2026-08-16, L106) — ne plus jamais dévier
+
+Validé par Matthieu (« parfait, bravo »). Forme fixe, paramètres variables (principe HDA). **Aucun `<br>` — le markdown ne les rend pas, ils s'affichent en clair.** Une ligne vide suffit à aérer.
+
+```
+N5  ▰▰▰▰▰▰▰▰▰▱  X% enseigné · Y% consolidé
+    kanji a/100 · grammaire b/38 · vocab c/800
+N4  ▰▰░░░░░░░░  X%
+    kanji a/200 · grammaire b/42 · vocab c/1500
+N3  ▰░░░░░░░░░  X%
+N2  ░░░░░░░░░░  X%
+
+# BOUCLE N — [titre] (15 min)
+
+## LE JAPONAIS SERT LA CONVERSATION, PAS L'EXAMEN (2026-08-16)
+
+Précision de la bannière japonaise ci-dessous, donnée par Matthieu le 2026-08-16 : la cible n'est pas le score JLPT, c'est **oser parler aux gens — surtout aux Japonaises — être intéressant en discussion, savoir écouter et faire rebondir**. Trois volets à tisser ensemble : la langue (juste ce qu'il faut pour dire ce qu'il veut), la **culture comme matière à conversation** (quartiers de Tokyo, histoire, habitudes, système scolaire, façon de penser), et la **mécanique sociale** (écoute, relance).
+
+Sert directement Japan in Love et le PVT janvier 2027. Détail opérationnel : `Memory/Japanese/CLAUDE.md`.
+
+**PRIORITÉ 0 depuis le 2026-08-27 : UNE LEÇON SAUVEGARDÉE L'EST SUR LE SITE, PAS SEULEMENT SUR GITHUB.**
+Demande explicite de Matthieu. `Memory/Japanese/Japanese1.md` alimente désormais la vue ZenRayJapanese de
+ZenRayProgress (zone Learn, entrée Japanese) : jauge N5 à N1, cartes de leçon, grammaire, vocabulaire, et
+une fiche de tracé par kanji. Un commit poussé rend le texte durable, il ne le rend pas visible : une
+leçon commitée mais absente du site n'a pas disparu, elle est devenue invisible, ce qui est pire puisque
+rien ne le signale. Sauvegarder veut donc dire trois gestes et non un : écrire dans le corpus, régénérer
+l'index par `Japanese/Scripts/build-japanese-index.py`, pousser, puis CONSTATER sur le site (cache
+d'environ cinq minutes).
+
+Le fichier reste la source unique et append-only ; le site n'y écrit jamais et la vue est en lecture
+seule. Le piège silencieux, à relire avant d'écrire quoi que ce soit : **le vocabulaire dicté en prose
+n'atteint jamais le site, seul un tableau à deux colonnes est lu**, et la jauge ne bouge que si la ligne
+« État mesuré au … » bouge. Routage complet : skill `ctrl-s`, section « Le cas japonais ». Bannière
+détaillée : `Memory/Japanese/CLAUDE.md`, en tête.
+
+---
+
+## PRIORITÉ 0 ABSOLUE — JAPONAIS = BOTTLENECK UNIQUE (2026-06-17)
+
+Matthieu est au Japon depuis le 12 juin 2026, pour 3 mois. Le japonais est **le** goulot d'étranglement actuel, la seule priorité réelle. Tout converge vers ça.
+
+Le bottleneck terrain précis : **les gens + le japonais parlé et lu** (lire une carte de restaurant, soutenir un échange, franchir le pas social). Le terrain japonais est la salle d'entraînement de l'exposition, enjeu quasi nul.
+
+**Règle de convergence :** quand une demande peut servir le japonais, elle le sert. Quand un arbitrage se présente, le japonais passe devant. Les autres axes (LifeOS, business, prospection, polissage) restent actifs mais **subordonnés** : ils avancent s'ils ne volent pas l'énergie du japonais, ou mieux, s'ils l'alimentent (prospection = même muscle d'exposition que parler à un inconnu au Japon).
+
+**Ce que ça change concrètement :**
+- Le menu X / Y / Z de fin de réponse vise en priorité un progrès japonais (oral, lecture terrain, social réel).
+- Règles japonaises opérationnelles : gouvernées par le skill canonique `zenray-learn-japanese` (`~/.claude/skills/zenray-learn-japanese/SKILL.md`). Corpus vivant dans `Memory/Japanese/Japanese1.md`.
+- Distinction stricte maintenue : **acquis** (grammaire/kanji/vocab drillés et restitués) vs **exposition consignée** (lu, pas encore consolidé). Ne jamais compter l'exposition comme maîtrise.
+- Hiérarchie des priorités héritée ci-dessous (P0 apprentissage, P0 bis LifeOS, P0 agency, P1 plan) reste valable **dans son domaine**, mais cette bannière la chapeaute toutes : à conflit, le japonais gagne.
+
+## BOUCLE 15/2 — unité de travail universelle (2026-08-14, validé sur le japonais)
+
+Découverte faite sur l'apprentissage du japonais, mais **valable pour tout objectif long** (game dev, sport, business, publication). Ce qui épuise Matthieu n'est pas le volume total d'une journée, c'est **un bloc continu sans clôture**. Il peut travailler du réveil au coucher à condition que chaque bloc se ferme.
+
+- **1 boucle = 15 min de travail + 2 min de pause, statut FINI explicite à la fin.**
+- **Aucun plafond journalier** : autant de boucles qu'il veut, tant que chacune se termine.
+- **Contrainte sur moi : chaque réponse doit être consommable en 15 min max.** Une réponse qui déborde est une faute de production, exactement comme une réponse verbeuse.
+- Chaque boucle finit par une **vérification courte**, jamais par « à suivre » ni par un pavé à digérer plus tard.
+
+C'est l'application directe de sa doctrine FAST LOOP (`Memory/Identity/Matthieu1.md`, contexte post-Fuji du 2026-08-11) : difficulté maximale, boucle minimale, feedback immédiat.
+
+## Projet japonais : méthode dans le skill canonique `zenray-learn-japanese`
+
+L'intégralité des règles spécifiques au projet japonais (template leçon, format kanji, drill protocol, posture épicurieuse, vision accélérée 3 mois N4 à N1, matrice think-of-everything) vit dans le skill canonique unique : **`~/.claude/skills/zenray-learn-japanese/SKILL.md`** (miroir dans `Memory/Skills/zenray-learn-japanese/SKILL.md`).
+
+Le dossier `Memory/Japanese/` conserve le corpus vivant append-only (`Japanese1.md`), le tracker SRS (`DrillTracker.md`), et l'indexeur pour ZenRayJapanese (`Scripts/build-japanese-index.py`). `Japanese/CLAUDE.md` sert de simple passerelle vers le skill.
+
+Toute modification des règles japonaises = éditer le skill canonique **`~/.claude/skills/zenray-learn-japanese/SKILL.md`**, puis synchroniser via `sync-skill.sh zenray-learn-japanese`.
+
+---
+
+
+## Template de leçon, les trois blocs (résidu de la section extraite)
+
+## ① RETEST
+[items des boucles précédentes, résultat en une ligne]
+
+## ② NEUF — [le point]
+[tableau 2 colonnes, homogène, zéro cellule vide, aucune explication dedans]
+[la règle APRÈS, en phrases courtes séparées par des lignes vides]
+
+## ③ DRILL
+**1.** ...
+**2.** ...
+**3.** ...
+```
+
+Règles de forme : jamais de `<br>` · tableau 2 colonnes seulement · le tableau montre, le texte explique · une ligne vide entre chaque idée · jamais plus de 3-4 items de drill.
+
+---
